@@ -1,0 +1,15 @@
+package com.kormi.app.data
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+
+@Dao
+interface AttendanceDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(attendance: Attendance)
+
+    @Query("SELECT * FROM attendance WHERE date = :date")
+    suspend fun getAttendanceByDate(date: String): List<Attendance>
+}
