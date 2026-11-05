@@ -23,6 +23,10 @@ interface WorkerDao {
     @Query("SELECT * FROM workers ORDER BY fullName ASC")
     fun getAllWorkers(): Flow<List<Worker>>
 
+    // নতুন: পাসওয়ার্ড আপডেট করার ফাংশন
+    @Query("UPDATE workers SET passwordHash = :newPassword WHERE workerId = :workerId")
+    suspend fun updatePassword(workerId: String, newPassword: String)
+
     @Query("DELETE FROM workers WHERE workerId = :workerId")
     suspend fun deleteWorker(workerId: String)
 }
