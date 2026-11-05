@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Worker::class], version = 2, exportSchema = false)
+@Database(entities = [Worker::class, Attendance::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun workerDao(): WorkerDao
+    abstract fun attendanceDao(): AttendanceDao
 
     companion object {
         @Volatile
@@ -20,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "kormi_database"
                 )
-                .fallbackToDestructiveMigration() // ডেভেলপমেন্টের সময় পুরনো ডাটা মুছে নতুন স্ট্রাকচার নেবে
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
