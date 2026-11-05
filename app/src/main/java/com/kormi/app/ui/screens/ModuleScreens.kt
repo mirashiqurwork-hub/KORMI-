@@ -62,7 +62,7 @@ fun ModulePlaceholderScreen(
     }
 }
 
-// ProductionScreen বাদ দেওয়া হয়েছে
+// AdminScreen বাদ দেওয়া হয়েছে
 
 @Composable
 fun MessagesScreen(nav: NavController) = ModulePlaceholderScreen("বার্তা", "Messages", nav, "অভ্যন্তরীণ বার্তা ও গ্রুপ চ্যাট পরবর্তী ধাপে আসবে।")
@@ -72,6 +72,3 @@ fun LocationScreen(nav: NavController) = ModulePlaceholderScreen("অবস্�
 
 @Composable
 fun NotificationsScreen(nav: NavController) = ModulePlaceholderScreen("বিজ্ঞপ্তি", "Notifications", nav, "পুশ ও ইন-অ্যাপ বিজ্ঞপ্তি পরবর্তী ধাপে আসবে।")
-
-@Composable
-fun AdminScreen(nav: NavController) = ModulePlaceholderScreen("অ্যাডমিন", "Admin & Access", nav, "রোল ও পারমিশন ম্যানেজমেন্ট পরবর্তী ধাপে আসবে।")
