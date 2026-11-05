@@ -1,5 +1,7 @@
 package com.kormi.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -46,8 +48,7 @@ fun WorkersScreen(navController: NavController) {
     var isSyncing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    // গুগল শিট থেকে ডাটা আনার ফাংশন (এখানে আপনার URL টি বসাবেন)
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
+    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান" // আগের URL টি এখানে থাকবে
 
     Scaffold(
         topBar = {
@@ -95,7 +96,7 @@ fun WorkersScreen(navController: NavController) {
             
             if (workers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("কোনো কর্মী পাওয়া যায়নি। উপরের রিফ্রেশ বাটনে ক্লিক করুন বা + দিয়ে যোগ করুন।", color = TextSecondary)
+                    Text("কোনো কর্মী পাওয়া যায়নি। রিফ্রেশ বাটনে ক্লিক করুন।", color = TextSecondary)
                 }
             } else {
                 LazyColumn(
@@ -103,7 +104,8 @@ fun WorkersScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(workers) { worker ->
-                        WorkerCard(worker)
+                        // নেভিগেশন পাস করা হলো
+                        WorkerCard(worker, navController)
                     }
                 }
             }
@@ -111,7 +113,6 @@ fun WorkersScreen(navController: NavController) {
     }
 }
 
-// গুগল শিট থেকে ডাটা ফেচ করে ডাটাবেসে সেভ করার ফাংশন
 suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
     return withContext(Dispatchers.IO) {
         try {
@@ -160,8 +161,11 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
 }
 
 @Composable
-fun WorkerCard(worker: Worker) {
+fun WorkerCard(worker: Worker, navController: NavController) {
+    val context = LocalContext.current
+    
     Card(
+        onClick = { navController.navigate("worker_details/${worker.workerId}") }, // প্রোফাইলে যাওয়ার ক্লিক
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -187,7 +191,13 @@ fun WorkerCard(worker: Worker) {
                 Text(text = "Section: ${worker.section}", fontSize = 12.sp, color = TextSecondary)
             }
             
-            IconButton(onClick = { /* Call Intent */ }) {
+            // ফোন কল করার ইভেন্ট
+            IconButton(onClick = {
+                if (worker.phone.isNotBlank()) {
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${worker.phone}"))
+                    context.startActivity(intent)
+                }
+            }) {
                 Icon(Icons.Default.Phone, contentDescription = "Call", tint = Navy)
             }
         }
