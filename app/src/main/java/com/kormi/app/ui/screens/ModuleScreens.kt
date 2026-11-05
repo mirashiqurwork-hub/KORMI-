@@ -62,10 +62,7 @@ fun ModulePlaceholderScreen(
     }
 }
 
-// WorkersScreen বাদ দেওয়া হয়েছে কারণ আমরা আসল স্ক্রিন বানিয়েছি
-
-@Composable
-fun AttendanceScreen(nav: NavController) = ModulePlaceholderScreen("উপস্থিতি", "Attendance", nav, "দৈনিক উপস্থিতি ও OCR ভিত্তিক অটোমেশন পরবর্তী ধাপে আসবে।")
+// AttendanceScreen বাদ দেওয়া হয়েছে
 
 @Composable
 fun ManpowerScreen(nav: NavController) = ModulePlaceholderScreen("জনবল", "Manpower", nav, "সেকশনভিত্তিক জনবল সারাংশ পরবর্তী ধাপে আসবে।")
