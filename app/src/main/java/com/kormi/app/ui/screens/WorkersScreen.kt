@@ -1,7 +1,7 @@
 package com.kormi.app.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,15 +28,26 @@ import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkersScreen(navController: NavController) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
+    val scope = rememberCoroutineScope()
     
-    // Flow থেকে ডাটা সংগ্রহ করা
     val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
+    var isSyncing by remember { mutableStateOf(false) }
+    var syncStatus by remember { mutableStateOf("") }
+
+    // গুগল শিট থেকে ডাটা আনার ফাংশন (এখানে আপনার URL টি বসাবেন)
+    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
 
     Scaffold(
         topBar = {
@@ -44,6 +56,23 @@ fun WorkersScreen(navController: NavController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                actions = {
+                    if (isSyncing) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp).padding(end = 16.dp))
+                    } else {
+                        IconButton(onClick = {
+                            isSyncing = true
+                            syncStatus = "Syncing..."
+                            scope.launch {
+                                val result = fetchAndSaveWorkers(appsScriptUrl, db)
+                                isSyncing = false
+                                syncStatus = result
+                            }
+                        }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
@@ -59,23 +88,73 @@ fun WorkersScreen(navController: NavController) {
             }
         }
     ) { padding ->
-        if (workers.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("কোনো কর্মী পাওয়া যায়নি। + বাটনে ক্লিক করে যোগ করুন।", color = TextSecondary)
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
+            if (syncStatus.isNotEmpty()) {
+                Text(text = syncStatus, color = Navy, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(workers) { worker ->
-                    WorkerCard(worker)
+            
+            if (workers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("কোনো কর্মী পাওয়া যায়নি। উপরের রিফ্রেশ বাটনে ক্লিক করুন বা + দিয়ে যোগ করুন।", color = TextSecondary)
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(workers) { worker ->
+                        WorkerCard(worker)
+                    }
                 }
             }
+        }
+    }
+}
+
+// গুগল শিট থেকে ডাটা ফেচ করে ডাটাবেসে সেভ করার ফাংশন
+suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            val url = URL(urlString)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val jsonArray = JSONArray(response)
+                
+                var count = 0
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    val worker = Worker(
+                        workerId = obj.getString("workerId"),
+                        photo = obj.optString("photo", ""),
+                        fullName = obj.getString("fullName"),
+                        phone = obj.optString("phone", ""),
+                        nidBirthCert = obj.optString("nid", ""),
+                        dateOfBirth = obj.optString("dob", ""),
+                        presentAddress = obj.optString("address", ""),
+                        section = obj.optString("section", ""),
+                        shift = obj.optString("shift", ""),
+                        weeklyOffDay = obj.optString("offDay", ""),
+                        status = if (obj.optString("status") == "Active") "Active" else "Inactive",
+                        unit = obj.optString("unit", ""),
+                        passwordHash = "1234" // ডিফল্ট পাসওয়ার্ড
+                    )
+                    db.workerDao().insertWorker(worker)
+                    count++
+                }
+                connection.disconnect()
+                "সফলভাবে $count জন কর্মীর ডাটা সিঙ্ক হয়েছে!"
+            } else {
+                "সিঙ্ক ব্যর্থ হয়েছে। রেসপন্স কোড: $responseCode"
+            }
+        } catch (e: Exception) {
+            Log.e("SyncError", e.toString())
+            "সিঙ্ক এরর: ${e.message}"
         }
     }
 }
@@ -92,7 +171,6 @@ fun WorkerCard(worker: Worker) {
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Profile Photo
             Box(
                 modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
@@ -102,7 +180,6 @@ fun WorkerCard(worker: Worker) {
             
             Spacer(Modifier.width(16.dp))
             
-            // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = worker.fullName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
@@ -110,8 +187,7 @@ fun WorkerCard(worker: Worker) {
                 Text(text = "Section: ${worker.section}", fontSize = 12.sp, color = TextSecondary)
             }
             
-            // Call Icon
-            IconButton(onClick = { /* Call Intent goes here later */ }) {
+            IconButton(onClick = { /* Call Intent */ }) {
                 Icon(Icons.Default.Phone, contentDescription = "Call", tint = Navy)
             }
         }
