@@ -62,10 +62,7 @@ fun ModulePlaceholderScreen(
     }
 }
 
-// AttendanceScreen বাদ দেওয়া হয়েছে
-
-@Composable
-fun ManpowerScreen(nav: NavController) = ModulePlaceholderScreen("জনবল", "Manpower", nav, "সেকশনভিত্তিক জনবল সারাংশ পরবর্তী ধাপে আসবে।")
+// ManpowerScreen বাদ দেওয়া হয়েছে
 
 @Composable
 fun ProductionScreen(nav: NavController) = ModulePlaceholderScreen("উৎপাদন", "Production", nav, "শিফটভিত্তিক উৎপাদন রিপোর্ট পরবর্তী ধাপে আসবে।")
