@@ -17,11 +17,12 @@ interface WorkerDao {
     @Query("SELECT * FROM workers WHERE status = 'Active'")
     fun getAllActiveWorkers(): Flow<List<Worker>>
 
-    // নতুন: অ্যাডমিনের জন্য সব কর্মীর তালিকা
+    @Query("SELECT * FROM workers WHERE status = 'Active'")
+    suspend fun getAllActiveWorkersList(): List<Worker>
+
     @Query("SELECT * FROM workers ORDER BY fullName ASC")
     fun getAllWorkers(): Flow<List<Worker>>
 
-    // নতুন: কর্মী ডিলিট করার জন্য
     @Query("DELETE FROM workers WHERE workerId = :workerId")
     suspend fun deleteWorker(workerId: String)
 }
