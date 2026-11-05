@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -24,11 +25,10 @@ import com.kormi.app.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkerProfileScreen(navController: NavController, worker: Worker?) {
+fun WorkerProfileScreen(navController: NavController, worker: Worker?, isAdminView: Boolean = false) {
     if (worker == null) {
-        // যদি ডাটা না পাওয়া যায়
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Worker data not found!")
+            CircularProgressIndicator(color = Navy)
         }
         return
     }
@@ -36,14 +36,25 @@ fun WorkerProfileScreen(navController: NavController, worker: Worker?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Profile", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isAdminView) "Worker Details" else "My Profile", color = Color.White, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    // অ্যাডমিন হলে ব্যাক অ্যারো দেখাবে
+                    if (isAdminView) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = { 
-                        navController.navigate("login") { 
-                            popUpTo(0) { inclusive = true } 
-                        } 
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = Color.White)
+                    // ওয়ার্কার হলে লগআউট দেখাবে
+                    if (!isAdminView) {
+                        IconButton(onClick = { 
+                            navController.navigate("login") { 
+                                popUpTo(0) { inclusive = true } 
+                            } 
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout", tint = Color.White)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
@@ -58,7 +69,6 @@ fun WorkerProfileScreen(navController: NavController, worker: Worker?) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Image Box
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -76,7 +86,6 @@ fun WorkerProfileScreen(navController: NavController, worker: Worker?) {
 
             Spacer(Modifier.height(24.dp))
 
-            // Details Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
