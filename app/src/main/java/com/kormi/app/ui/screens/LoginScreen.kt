@@ -32,26 +32,16 @@ fun LoginScreen(navController: NavController) {
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    // অ্যাপ খোলার সময় ডেমো ডাটা সেভ করা (পরে গুগল শিট থেকে আসবে)
     LaunchedEffect(Unit) {
         scope.launch {
             val existing = db.workerDao().getWorkerByCard("503056")
             if (existing == null) {
                 db.workerDao().insertWorker(
                     Worker(
-                        workerId = "503056",
-                        photo = null,
-                        fullName = "NASIR HASSAIN",
-                        phone = "01875829726",
-                        nidBirthCert = "1234567890",
-                        dateOfBirth = null,
-                        presentAddress = "Sitakund, Bangladesh",
-                        section = "Ring",
-                        shift = "B",
-                        weeklyOffDay = "SATURDAY",
-                        status = "Active",
-                        unit = "02",
-                        passwordHash = "1234"
+                        workerId = "503056", photo = null, fullName = "NASIR HASSAIN",
+                        phone = "01875829726", nidBirthCert = "1234567890", dateOfBirth = null,
+                        presentAddress = "Sitakund, Bangladesh", section = "Ring", shift = "B",
+                        weeklyOffDay = "SATURDAY", status = "Active", unit = "02", passwordHash = "1234"
                     )
                 )
             }
@@ -59,10 +49,7 @@ fun LoginScreen(navController: NavController) {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().background(Color.White).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -74,7 +61,7 @@ fun LoginScreen(navController: NavController) {
         OutlinedTextField(
             value = cardNumber,
             onValueChange = { cardNumber = it },
-            label = { Text("Card Number") },
+            label = { Text("Card Number (or ADMIN)") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         )
@@ -103,22 +90,23 @@ fun LoginScreen(navController: NavController) {
                 } else {
                     isLoading = true
                     scope.launch {
-                        val worker = db.workerDao().getWorkerByCard(cardNumber)
-                        if (worker != null && worker.passwordHash == password) {
-                            // লগইন সফল
-                            navController.navigate("profile/${worker.workerId}") {
-                                popUpTo("login") { inclusive = true }
-                            }
+                        // অ্যাডমিন লগইন চেক
+                        if (cardNumber.equals("ADMIN", ignoreCase = true) && password == "ADMIN123") {
+                            navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                         } else {
-                            errorMessage = "ভুল কার্ড নম্বর বা পাসওয়ার্ড!"
-                            isLoading = false
+                            // ওয়ার্কার লগইন চেক
+                            val worker = db.workerDao().getWorkerByCard(cardNumber)
+                            if (worker != null && worker.passwordHash == password) {
+                                navController.navigate("profile/${worker.workerId}") { popUpTo("login") { inclusive = true } }
+                            } else {
+                                errorMessage = "ভুল কার্ড নম্বর বা পাসওয়ার্ড!"
+                                isLoading = false
+                            }
                         }
                     }
                 }
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
+            modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Navy),
             shape = RoundedCornerShape(12.dp),
             enabled = !isLoading
@@ -128,12 +116,6 @@ fun LoginScreen(navController: NavController) {
             } else {
                 Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        TextButton(onClick = { /* Admin Login */ }) {
-            Text("Admin Login", color = TextSecondary)
         }
     }
 }
