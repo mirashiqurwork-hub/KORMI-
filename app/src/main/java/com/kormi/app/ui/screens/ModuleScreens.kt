@@ -1,0 +1,136 @@
+package com.kormi.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Construction
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.kormi.app.ui.theme.Gold
+import com.kormi.app.ui.theme.Navy
+import com.kormi.app.ui.theme.TextSecondary
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ModulePlaceholderScreen(
+    titleBn: String,
+    titleEn: String,
+    navController: NavController,
+    description: String = "এই মডিউলটি পরবর্তী ধাপে সম্পূর্ণ কার্যকর হবে।"
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = {
+                Column {
+                    Text(
+                        text = titleBn,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = titleEn,
+                        fontSize = 11.sp,
+                        color = Gold,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .background(Navy.copy(alpha = 0.08f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.Construction,
+                    contentDescription = null,
+                    tint = Navy,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = titleBn,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Navy
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = description,
+                fontSize = 14.sp,
+                color = TextSecondary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkersScreen(nav: NavController) =
+    ModulePlaceholderScreen("কর্মী", "Workers", nav,
+        "কর্মী নিবন্ধন, তালিকা, প্রোফাইল ও অনুসন্ধান পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun AttendanceScreen(nav: NavController) =
+    ModulePlaceholderScreen("উপস্থিতি", "Attendance", nav,
+        "দৈনিক উপস্থিতি ও OCR ভিত্তিক অটোমেশন পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun ManpowerScreen(nav: NavController) =
+    ModulePlaceholderScreen("জনবল", "Manpower", nav,
+        "সেকশনভিত্তিক জনবল সারাংশ পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun ProductionScreen(nav: NavController) =
+    ModulePlaceholderScreen("উৎপাদন", "Production", nav,
+        "শিফটভিত্তিক উৎপাদন রিপোর্ট পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun MessagesScreen(nav: NavController) =
+    ModulePlaceholderScreen("বার্তা", "Messages", nav,
+        "অভ্যন্তরীণ বার্তা ও গ্রুপ চ্যাট পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun LocationScreen(nav: NavController) =
+    ModulePlaceholderScreen("অবস্থান", "Location", nav,
+        "লাইভ লোকেশন শেয়ারিং পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun NotificationsScreen(nav: NavController) =
+    ModulePlaceholderScreen("বিজ্ঞপ্তি", "Notifications", nav,
+        "পুশ ও ইন-অ্যাপ বিজ্ঞপ্তি পরবর্তী ধাপে আসবে।")
+
+@Composable
+fun AdminScreen(nav: NavController) =
+    ModulePlaceholderScreen("অ্যাডমিন", "Admin & Access", nav,
+        "রোল ও পারমিশন ম্যানেজমেন্ট পরবর্তী ধাপে আসবে।")
