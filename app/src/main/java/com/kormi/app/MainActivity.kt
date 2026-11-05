@@ -23,8 +23,9 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(
                         navController = navController,
-                        startDestination = "dashboard"
+                        startDestination = "login" // অ্যাপ খুললে প্রথমে লগইন স্ক্রিন আসবে
                     ) {
+                        composable("login") { LoginScreen(navController) }
                         composable("dashboard") { DashboardScreen(navController) }
                         composable("workers") { WorkersScreen(navController) }
                         composable("attendance") { AttendanceScreen(navController) }
