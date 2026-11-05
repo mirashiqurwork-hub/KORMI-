@@ -62,10 +62,7 @@ fun ModulePlaceholderScreen(
     }
 }
 
-// ManpowerScreen বাদ দেওয়া হয়েছে
-
-@Composable
-fun ProductionScreen(nav: NavController) = ModulePlaceholderScreen("উৎপাদন", "Production", nav, "শিফটভিত্তিক উৎপাদন রিপোর্ট পরবর্তী ধাপে আসবে।")
+// ProductionScreen বাদ দেওয়া হয়েছে
 
 @Composable
 fun MessagesScreen(nav: NavController) = ModulePlaceholderScreen("বার্তা", "Messages", nav, "অভ্যন্তরীণ বার্তা ও গ্রুপ চ্যাট পরবর্তী ধাপে আসবে।")
