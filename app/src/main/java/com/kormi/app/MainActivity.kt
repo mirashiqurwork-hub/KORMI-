@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
                         composable("login") { LoginScreen(navController) }
                         composable("dashboard") { DashboardScreen(navController) }
                         
-                        // নিজের প্রোফাইল (লগইন করা কর্মী)
                         composable("profile/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             LaunchedEffect(workerId) {
@@ -50,7 +49,6 @@ class MainActivity : ComponentActivity() {
                             WorkerProfileScreen(navController, loggedInWorker, isAdminView = false)
                         }
 
-                        // কর্মীর ডিটেলস (অ্যাডমিনের জন্য)
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
@@ -62,14 +60,17 @@ class MainActivity : ComponentActivity() {
 
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
-
                         composable("attendance") { AttendanceScreen(navController) }
                         composable("manpower") { ManpowerScreen(navController) }
                         composable("production") { ProductionScreen(navController) }
+                        
+                        // নতুন অ্যাডমিন রুট
+                        composable("admin") { AdminScreen(navController) }
+                        composable("admin_passwords") { ManagePasswordsScreen(navController) }
+
                         composable("messages") { MessagesScreen(navController) }
                         composable("location") { LocationScreen(navController) }
                         composable("notifications") { NotificationsScreen(navController) }
-                        composable("admin") { AdminScreen(navController) }
                     }
                 }
             }
