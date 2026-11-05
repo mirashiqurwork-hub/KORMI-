@@ -8,20 +8,55 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val scope = rememberCoroutineScope()
+
     var cardNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    // অ্যাপ খোলার সময় ডেমো ডাটা সেভ করা (পরে গুগল শিট থেকে আসবে)
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val existing = db.workerDao().getWorkerByCard("503056")
+            if (existing == null) {
+                db.workerDao().insertWorker(
+                    Worker(
+                        workerId = "503056",
+                        photo = null,
+                        fullName = "NASIR HASSAIN",
+                        phone = "01875829726",
+                        nidBirthCert = "1234567890",
+                        dateOfBirth = null,
+                        presentAddress = "Sitakund, Bangladesh",
+                        section = "Ring",
+                        shift = "B",
+                        weeklyOffDay = "SATURDAY",
+                        status = "Active",
+                        unit = "02",
+                        passwordHash = "1234"
+                    )
+                )
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -31,18 +66,8 @@ fun LoginScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Kormi",
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            color = Navy
-        )
-        Text(
-            text = "Workforce Companion",
-            fontSize = 14.sp,
-            color = Gold,
-            fontWeight = FontWeight.Medium
-        )
+        Text(text = "Kormi", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = Navy)
+        Text(text = "Workforce Companion", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
 
         Spacer(modifier = Modifier.height(48.dp))
 
@@ -76,9 +101,18 @@ fun LoginScreen(navController: NavController) {
                 if (cardNumber.isBlank() || password.isBlank()) {
                     errorMessage = "কার্ড নম্বর এবং পাসওয়ার্ড দিন"
                 } else {
-                    // আপাতত আমরা সরাসরি ড্যাশবোর্ডে পাঠাচ্ছি। পরের ধাপে ডাটাবেস চেক করব।
-                    navController.navigate("dashboard") {
-                        popUpTo("login") { inclusive = true }
+                    isLoading = true
+                    scope.launch {
+                        val worker = db.workerDao().getWorkerByCard(cardNumber)
+                        if (worker != null && worker.passwordHash == password) {
+                            // লগইন সফল
+                            navController.navigate("profile/${worker.workerId}") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        } else {
+                            errorMessage = "ভুল কার্ড নম্বর বা পাসওয়ার্ড!"
+                            isLoading = false
+                        }
                     }
                 }
             },
@@ -86,9 +120,14 @@ fun LoginScreen(navController: NavController) {
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Navy),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = !isLoading
         ) {
-            Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
