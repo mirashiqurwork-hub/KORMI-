@@ -11,9 +11,9 @@ interface WorkerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorker(worker: Worker)
 
-    @Query("SELECT * FROM workers WHERE cardNumber = :cardNumber")
-    suspend fun getWorkerByCard(cardNumber: String): Worker?
+    @Query("SELECT * FROM workers WHERE workerId = :workerId")
+    suspend fun getWorkerByCard(workerId: String): Worker?
 
-    @Query("SELECT * FROM workers WHERE isActive = 1")
+    @Query("SELECT * FROM workers WHERE status = 'Active'")
     fun getAllActiveWorkers(): Flow<List<Worker>>
 }
