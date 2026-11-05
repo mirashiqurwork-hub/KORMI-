@@ -49,7 +49,10 @@ class MainActivity : ComponentActivity() {
                             WorkerProfileScreen(navController, loggedInWorker)
                         }
 
+                        // নতুন রুট
                         composable("workers") { WorkersScreen(navController) }
+                        composable("add_worker") { AddWorkerScreen(navController) }
+
                         composable("attendance") { AttendanceScreen(navController) }
                         composable("manpower") { ManpowerScreen(navController) }
                         composable("production") { ProductionScreen(navController) }
