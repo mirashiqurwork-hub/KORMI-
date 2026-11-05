@@ -47,7 +47,7 @@ fun WorkersScreen(navController: NavController) {
     var syncStatus by remember { mutableStateOf("") }
 
     // গুগল শিট থেকে ডাটা আনার ফাংশন (এখানে আপনার URL টি বসাবেন)
-    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
     Scaffold(
         topBar = {
