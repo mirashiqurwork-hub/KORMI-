@@ -37,17 +37,21 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val month = calendar.get(Calendar.MONTH)
     val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     
+    // এই মাসের ডাটা ফিল্টার করার জন্য
     val monthStr = String.format(Locale.US, "%04d-%02d", year, month + 1)
 
     LaunchedEffect(Unit) {
-        val allAttendance = db.attendanceDao().getAttendanceByDate("")
-        val myAttendance = allAttendance.filter { it.workerId == worker.workerId }
+        val myAttendance = db.attendanceDao().getWorkerAttendance(worker.workerId)
         val map = mutableMapOf<Int, String>()
+        
         myAttendance.forEach { att ->
-            try {
-                val day = att.date.split("-").last().toInt()
-                map[day] = att.status
-            } catch (e: Exception) {}
+            // যদি বর্তমান মাসের ডাটা হয়
+            if (att.date.startsWith(monthStr)) {
+                try {
+                    val day = att.date.split("-").last().toInt()
+                    map[day] = att.status
+                } catch (e: Exception) {}
+            }
         }
         attendanceMap = map
     }
@@ -64,7 +68,7 @@ fun WorkerAttendanceScreen(worker: Worker) {
         }
     }
 
-    val dailyWage = worker.dailyWage ?: 0.0
+    val dailyWage = worker.dailyWage ?: 500.0
     val estimatedSalary = presentCount * dailyWage
 
     Scaffold(
