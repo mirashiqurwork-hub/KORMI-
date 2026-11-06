@@ -46,19 +46,16 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("dashboard") { DashboardScreen(navController) }
                         
-                        // Worker Dashboard (নতুন)
                         composable("worker_dashboard") { 
                             WorkerDashboardScreen(navController, loggedInWorker) 
                         }
 
-                        // অ্যাডমিন যখন কোনো কর্মীর প্রোফাইল দেখতে যাবে
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
                             LaunchedEffect(workerId) {
                                 selectedWorker = db.workerDao().getWorkerByCard(workerId)
                             }
-                            // এখানে mainNavController হিসেবে navController পাঠানো হচ্ছে
                             WorkerProfileScreen(navController, selectedWorker)
                         }
 
