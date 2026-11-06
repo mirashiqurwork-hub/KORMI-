@@ -44,7 +44,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
     var expanded by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf(worker.photo) }
 
-    // গ্যালারি থেকে ছবি নেওয়ার লঞ্চার
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -93,7 +92,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // প্রোফাইল ছবি
             Box(
                 modifier = Modifier
                     .size(100.dp)
