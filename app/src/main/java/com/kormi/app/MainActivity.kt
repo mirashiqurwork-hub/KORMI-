@@ -31,12 +31,18 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     
                     var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
+                    // বর্তমানে কে লগইন করা আছে তার আইডি (ADMIN অথবা Worker_ID)
+                    var currentUserId by remember { mutableStateOf("") } 
 
                     NavHost(
                         navController = navController,
                         startDestination = "login"
                     ) {
-                        composable("login") { LoginScreen(navController) }
+                        composable("login") { 
+                            LoginScreen(navController) { userId ->
+                                currentUserId = userId
+                            } 
+                        }
                         composable("dashboard") { DashboardScreen(navController) }
                         
                         composable("profile/{workerId}") { backStackEntry ->
@@ -64,11 +70,17 @@ class MainActivity : ComponentActivity() {
                         composable("manpower") { ManpowerScreen(navController) }
                         composable("production") { ProductionScreen(navController) }
                         
-                        // নতুন অ্যাডমিন রুট
                         composable("admin") { AdminScreen(navController) }
                         composable("admin_passwords") { ManagePasswordsScreen(navController) }
 
-                        composable("messages") { MessagesScreen(navController) }
+                        // নতুন মেসেজ রুট
+                        composable("messages") { MessagesScreen(navController, currentUserId) }
+                        composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
+                            val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
+                            val receiverId = backStackEntry.arguments?.getString("receiverId") ?: ""
+                            ChatDetailScreen(navController, senderId, receiverId)
+                        }
+
                         composable("location") { LocationScreen(navController) }
                         composable("notifications") { NotificationsScreen(navController) }
                     }
