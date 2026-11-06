@@ -51,13 +51,14 @@ class MainActivity : ComponentActivity() {
                             WorkerDashboardScreen(navController, loggedInWorker) 
                         }
 
+                        // অ্যাডমিন যখন কোনো কর্মীর প্রোফাইল দেখতে যাবে
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
                             LaunchedEffect(workerId) {
                                 selectedWorker = db.workerDao().getWorkerByCard(workerId)
                             }
-                            // অ্যাডমিন ভিউ এর জন্য আলাদা পেজ
+                            // এখানে mainNavController হিসেবে navController পাঠানো হচ্ছে
                             WorkerProfileScreen(navController, selectedWorker)
                         }
 
