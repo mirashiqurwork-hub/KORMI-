@@ -17,7 +17,6 @@ import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
-import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +31,7 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String) -> Unit) 
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
+    // অ্যাপ খোলার সময় ডেমো ডাটা সেভ করা
     LaunchedEffect(Unit) {
         scope.launch {
             val existing = db.workerDao().getWorkerByCard("503056")
@@ -90,14 +90,17 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String) -> Unit) 
                 } else {
                     isLoading = true
                     scope.launch {
+                        // অ্যাডমিন লগইন চেক
                         if (cardNumber.equals("ADMIN", ignoreCase = true) && password == "ADMIN123") {
                             onLoginSuccess("ADMIN")
                             navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                         } else {
+                            // ওয়ার্কার লগইন চেক
                             val worker = db.workerDao().getWorkerByCard(cardNumber)
                             if (worker != null && worker.passwordHash == password) {
                                 onLoginSuccess(worker.workerId)
-                                navController.navigate("profile/${worker.workerId}") { popUpTo("login") { inclusive = true } }
+                                // ওয়ার্কার ড্যাশবোর্ডে পাঠানো হচ্ছে
+                                navController.navigate("worker_dashboard") { popUpTo("login") { inclusive = true } }
                             } else {
                                 errorMessage = "ভুল কার্ড নম্বর বা পাসওয়ার্ড!"
                                 isLoading = false
