@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -37,7 +38,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val month = calendar.get(Calendar.MONTH)
     val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     
-    // এই মাসের ডাটা ফিল্টার করার জন্য
     val monthStr = String.format(Locale.US, "%04d-%02d", year, month + 1)
 
     LaunchedEffect(Unit) {
@@ -45,7 +45,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
         val map = mutableMapOf<Int, String>()
         
         myAttendance.forEach { att ->
-            // যদি বর্তমান মাসের ডাটা হয়
             if (att.date.startsWith(monthStr)) {
                 try {
                     val day = att.date.split("-").last().toInt()
@@ -82,7 +81,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
         Column(
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)
         ) {
-            // Salary Card
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = Navy),
