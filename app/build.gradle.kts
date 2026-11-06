@@ -46,13 +46,15 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
-    // Image Loading Library for Profile Picture
-implementation("io.coil-kt:coil-compose:2.6.0")
+    
     // Room Database Dependencies
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Image Loading Library (Coil) - প্রোফাইল ছবির জন্য
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
