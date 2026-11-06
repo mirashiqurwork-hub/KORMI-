@@ -13,7 +13,7 @@ interface AttendanceDao {
     @Query("SELECT * FROM attendance WHERE date = :date")
     suspend fun getAttendanceByDate(date: String): List<Attendance>
 
-    // নতুন: একজন কর্মীর সব অ্যাটেনডেন্স দেখা
+    // নতুন: একজন নির্দিষ্ট কর্মীর সব অ্যাটেনডেন্স দেখা
     @Query("SELECT * FROM attendance WHERE workerId = :workerId")
     suspend fun getWorkerAttendance(workerId: String): List<Attendance>
 }
