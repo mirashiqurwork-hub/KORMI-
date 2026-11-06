@@ -105,7 +105,7 @@ fun WorkerAttendanceScreen(worker: Worker) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(maxDays) { index ->
+                items(count = maxDays) { index ->
                     val day = index + 1
                     val status = attendanceMap[day] ?: "Unmarked"
                     val bgColor = when(status) {
