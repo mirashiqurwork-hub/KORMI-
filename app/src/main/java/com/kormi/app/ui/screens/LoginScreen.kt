@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController, onLoginSuccess: (String) -> Unit) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
@@ -90,13 +90,13 @@ fun LoginScreen(navController: NavController) {
                 } else {
                     isLoading = true
                     scope.launch {
-                        // অ্যাডমিন লগইন চেক
                         if (cardNumber.equals("ADMIN", ignoreCase = true) && password == "ADMIN123") {
+                            onLoginSuccess("ADMIN")
                             navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                         } else {
-                            // ওয়ার্কার লগইন চেক
                             val worker = db.workerDao().getWorkerByCard(cardNumber)
                             if (worker != null && worker.passwordHash == password) {
+                                onLoginSuccess(worker.workerId)
                                 navController.navigate("profile/${worker.workerId}") { popUpTo("login") { inclusive = true } }
                             } else {
                                 errorMessage = "ভুল কার্ড নম্বর বা পাসওয়ার্ড!"
