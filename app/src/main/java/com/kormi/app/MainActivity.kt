@@ -31,28 +31,24 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     
                     var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
-                    // বর্তমানে কে লগইন করা আছে তার আইডি (ADMIN অথবা Worker_ID)
-                    var currentUserId by remember { mutableStateOf("") } 
+                    var currentUserId by remember { mutableStateOf("") }
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = "login"
-                    ) {
+                    NavHost(navController = navController, startDestination = "login") {
                         composable("login") { 
                             LoginScreen(navController) { userId ->
                                 currentUserId = userId
+                                if (userId != "ADMIN") {
+                                    scope.launch {
+                                        loggedInWorker = db.workerDao().getWorkerByCard(userId)
+                                    }
+                                }
                             } 
                         }
                         composable("dashboard") { DashboardScreen(navController) }
                         
-                        composable("profile/{workerId}") { backStackEntry ->
-                            val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
-                            LaunchedEffect(workerId) {
-                                scope.launch {
-                                    loggedInWorker = db.workerDao().getWorkerByCard(workerId)
-                                }
-                            }
-                            WorkerProfileScreen(navController, loggedInWorker, isAdminView = false)
+                        // Worker Dashboard (নতুন)
+                        composable("worker_dashboard") { 
+                            WorkerDashboardScreen(navController, loggedInWorker) 
                         }
 
                         composable("worker_details/{workerId}") { backStackEntry ->
@@ -61,7 +57,8 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(workerId) {
                                 selectedWorker = db.workerDao().getWorkerByCard(workerId)
                             }
-                            WorkerProfileScreen(navController, selectedWorker, isAdminView = true)
+                            // অ্যাডমিন ভিউ এর জন্য আলাদা পেজ
+                            WorkerProfileScreen(navController, selectedWorker)
                         }
 
                         composable("workers") { WorkersScreen(navController) }
@@ -69,18 +66,15 @@ class MainActivity : ComponentActivity() {
                         composable("attendance") { AttendanceScreen(navController) }
                         composable("manpower") { ManpowerScreen(navController) }
                         composable("production") { ProductionScreen(navController) }
-                        
                         composable("admin") { AdminScreen(navController) }
                         composable("admin_passwords") { ManagePasswordsScreen(navController) }
 
-                        // নতুন মেসেজ রুট
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
                             val receiverId = backStackEntry.arguments?.getString("receiverId") ?: ""
                             ChatDetailScreen(navController, senderId, receiverId)
                         }
-
                         composable("location") { LocationScreen(navController) }
                         composable("notifications") { NotificationsScreen(navController) }
                     }
