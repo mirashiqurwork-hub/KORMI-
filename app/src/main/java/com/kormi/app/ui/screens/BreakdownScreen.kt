@@ -2,14 +2,12 @@ package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -82,47 +80,97 @@ fun BreakdownScreen(navController: NavController) {
             )
         }
     ) { padding ->
+        // ক্র্যাশ এড়ানোর জন্য LazyColumn এর বদলে verticalScroll ব্যবহার করা হয়েছে
         Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF2F4F7))
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
             Text("Date: $selectedDate", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(12.dp))
 
             // এন্ট্রি ফর্ম
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White), 
+                shape = RoundedCornerShape(12.dp), 
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Shift Dropdown
-                        Box(modifier = Modifier.weight(1f)) {
+                        
+                        // Shift Dropdown (Material 3 Standard)
+                        ExposedDropdownMenuBox(
+                            expanded = expandedShift,
+                            onExpandedChange = { expandedShift = it },
+                            modifier = Modifier.weight(1f)
+                        ) {
                             OutlinedTextField(
-                                value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
-                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
+                                value = shift,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Shift") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedShift) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
                             )
-                            Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
-                            DropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
-                                shifts.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { shift = s; expandedShift = false }) }
+                            ExposedDropdownMenu(
+                                expanded = expandedShift,
+                                onDismissRequest = { expandedShift = false }
+                            ) {
+                                shifts.forEach { s ->
+                                    DropdownMenuItem(
+                                        text = { Text(s) },
+                                        onClick = { shift = s; expandedShift = false }
+                                    )
+                                }
                             }
                         }
-                        
-                        // Section Dropdown
-                        Box(modifier = Modifier.weight(1f)) {
+
+                        // Section Dropdown (Material 3 Standard)
+                        ExposedDropdownMenuBox(
+                            expanded = expandedSection,
+                            onExpandedChange = { expandedSection = it },
+                            modifier = Modifier.weight(1f)
+                        ) {
                             OutlinedTextField(
-                                value = section, onValueChange = {}, readOnly = true, label = { Text("Section") },
-                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
+                                value = section,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Section") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
                             )
-                            Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
-                            DropdownMenu(expanded = expandedSection, onDismissRequest = { expandedSection = false }) {
-                                sections.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { section = s; expandedSection = false }) }
+                            ExposedDropdownMenu(
+                                expanded = expandedSection,
+                                onDismissRequest = { expandedSection = false }
+                            ) {
+                                sections.forEach { s ->
+                                    DropdownMenuItem(
+                                        text = { Text(s) },
+                                        onClick = { section = s; expandedSection = false }
+                                    )
+                                }
                             }
                         }
                     }
                     
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = machineName, onValueChange = { machineName = it }, label = { Text("Machine Name/No") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = machineName, onValueChange = { machineName = it }, 
+                        label = { Text("Machine Name/No") }, modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = minutes, onValueChange = { minutes = it }, label = { Text("Breakdown Time (Minutes)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = minutes, onValueChange = { minutes = it }, 
+                        label = { Text("Breakdown Time (Minutes)") }, modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = reason, onValueChange = { reason = it }, 
+                        label = { Text("Reason") }, modifier = Modifier.fillMaxWidth()
+                    )
                     
                     Spacer(Modifier.height(12.dp))
                     Button(
@@ -149,20 +197,27 @@ fun BreakdownScreen(navController: NavController) {
             Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            // এখানে weight(1f) যোগ করা হয়েছে ক্র্যাশ ঠেকানোর জন্য
-            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(breakdowns) { bd ->
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
-                                Text("${bd.machineName} (${bd.section})", fontWeight = FontWeight.Bold, color = Navy)
-                                Text("Shift: ${bd.shift} | Reason: ${bd.reason}", fontSize = 12.sp, color = TextSecondary)
-                            }
-                            Text("${bd.minutes} min", fontWeight = FontWeight.Bold, color = Gold, fontSize = 16.sp)
+            // লিস্ট ভিউ (Column দিয়ে তৈরি, যা ১০০% ক্র্যাশ-ফ্রি)
+            breakdowns.forEach { bd ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White), 
+                    shape = RoundedCornerShape(12.dp), 
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp), 
+                        horizontalArrangement = Arrangement.SpaceBetween, 
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("${bd.machineName} (${bd.section})", fontWeight = FontWeight.Bold, color = Navy)
+                            Text("Shift: ${bd.shift} | Reason: ${bd.reason}", fontSize = 12.sp, color = TextSecondary)
                         }
+                        Text("${bd.minutes} min", fontWeight = FontWeight.Bold, color = Gold, fontSize = 16.sp)
                     }
                 }
             }
+            Spacer(Modifier.height(24.dp)) // নিচে একটু ফাঁকা জায়গা
         }
     }
 }
