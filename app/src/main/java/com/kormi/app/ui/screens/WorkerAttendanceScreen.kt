@@ -37,19 +37,14 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val year = calendar.get(Calendar.YEAR)
     val month = calendar.get(Calendar.MONTH)
     val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    
     val monthStr = String.format(Locale.US, "%04d-%02d", year, month + 1)
 
     LaunchedEffect(Unit) {
         val myAttendance = db.attendanceDao().getWorkerAttendance(worker.workerId)
         val map = mutableMapOf<Int, String>()
-        
         myAttendance.forEach { att ->
             if (att.date.startsWith(monthStr)) {
-                try {
-                    val day = att.date.split("-").last().toInt()
-                    map[day] = att.status
-                } catch (e: Exception) {}
+                try { map[att.date.split("-").last().toInt()] = att.status } catch (e: Exception) {}
             }
         }
         attendanceMap = map
@@ -58,7 +53,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
     var presentCount = 0
     var absentCount = 0
     var offDayCount = 0
-    
     attendanceMap.forEach { (_, status) ->
         when(status) {
             "Present" -> presentCount++
@@ -67,25 +61,15 @@ fun WorkerAttendanceScreen(worker: Worker) {
         }
     }
 
-    val dailyWage = worker.dailyWage ?: 500.0
+    // পরিবর্তন এখানে (dailyWage এর বদলে salary)
+    val dailyWage = if (worker.salary > 0) worker.salary else 500.0
     val estimatedSalary = presentCount * dailyWage
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
-            )
-        }
+        topBar = { TopAppBar(title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)) }
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = Navy),
-                shape = RoundedCornerShape(16.dp)
-            ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Estimated Salary (${SimpleDateFormat("MMMM", Locale.US).format(calendar.time)})", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                     Text("৳ ${String.format(Locale.US, "%.2f", estimatedSalary)}", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Bold)
@@ -100,11 +84,7 @@ fun WorkerAttendanceScreen(worker: Worker) {
 
             Text("Attendance Calendar", color = Navy, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 12.dp))
             
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            LazyVerticalGrid(columns = GridCells.Fixed(7), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(count = maxDays) { index ->
                     val day = index + 1
                     val status = attendanceMap[day] ?: "Unmarked"
@@ -115,17 +95,13 @@ fun WorkerAttendanceScreen(worker: Worker) {
                         else -> Color.LightGray.copy(alpha = 0.5f)
                     }
                     val textColor = if (status == "Unmarked") Color.DarkGray else Color.White
-
-                    Box(
-                        modifier = Modifier.aspectRatio(1f).clip(CircleShape).background(bgColor),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.aspectRatio(1f).clip(CircleShape).background(bgColor), contentAlignment = Alignment.Center) {
                         Text(day.toString(), color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
             Spacer(Modifier.height(16.dp))
-            Text("* এই ডাটা শুধুমাত্র দেখার জন্য। কোনো পরিবর্তন করতে চাইলে অ্যাডমিনের সাথে যোগাযোগ করুন।", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Text("* এই ডাটা শুধুমাত্র দেখার জন্য।", color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
     }
 }
