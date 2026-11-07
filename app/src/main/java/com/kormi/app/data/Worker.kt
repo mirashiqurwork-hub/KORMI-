@@ -6,18 +6,30 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "workers")
 data class Worker(
     @PrimaryKey
-    val workerId: String,
-    val photo: String?,
+    val workerId: String, // Card Number / Email
     val fullName: String,
-    val phone: String,
-    val nidBirthCert: String?,
-    val dateOfBirth: String?,
-    val presentAddress: String?,
-    val section: String,
-    val shift: String,
-    val weeklyOffDay: String,
-    val status: String,
-    val unit: String,
+    val role: String, // Worker, Officer, Management, Admin
+    val designation: String, // Helper, APO, PM, ইত্যাদি
+    val companyId: Int, // কোন কোম্পানিতে কাজ করে
+    
+    val photo: String? = null,
+    val phone: String = "",
+    val nidBirthCert: String? = null,
+    val dateOfBirth: String? = null,
+    val presentAddress: String? = null,
+    val latitude: Double? = null, // গুগল ম্যাপ লোকেশন
+    val longitude: Double? = null,
+    
+    val shift: String? = null, // P/A, P/B, P/C, All Shift
+    val section: String? = null, // Backside, Ring, Autocone, Packing, All Section
+    val unit: String? = null, // Unit-01, Unit-02, G/F, F/F, All Unit
+    val weeklyOffDay: String? = null,
+    
+    val status: String = "Pending", // Active, Inactive, Pending
+    val salary: Double = 0.0, // সবার বেতন
     val passwordHash: String = "1234",
-    val dailyWage: Double? = 500.0 // ডিফল্ট দৈনিক বেতন ৫০০ টাকা
+    
+    // এক্সেস কন্ট্রোল (ভবিষ্যতে কাজে লাগবে)
+    val accessUnits: String? = null, // কমা দিয়ে আলাদা করা
+    val accessSections: String? = null
 )
