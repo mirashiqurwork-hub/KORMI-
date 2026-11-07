@@ -36,7 +36,6 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(navController = navController, startDestination = "login") {
                         composable("login") { 
-                            // এখানে ২টি প্যারামিটার নেওয়া হচ্ছে (ID এবং Role)
                             LoginScreen(navController) { userId, role ->
                                 currentUserId = userId
                                 currentUserRole = role
@@ -47,21 +46,17 @@ class MainActivity : ComponentActivity() {
                                 }
                             } 
                         }
-                        composable("dashboard") { DashboardScreen(navController) }
+                        // নতুন রুট: রেজিস্ট্রেশন
+                        composable("register") { RegisterScreen(navController) }
                         
-                        composable("worker_dashboard") { 
-                            WorkerDashboardScreen(navController, loggedInWorker) 
-                        }
-
+                        composable("dashboard") { DashboardScreen(navController) }
+                        composable("worker_dashboard") { WorkerDashboardScreen(navController, loggedInWorker) }
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
-                            LaunchedEffect(workerId) {
-                                selectedWorker = db.workerDao().getWorkerByCard(workerId)
-                            }
+                            LaunchedEffect(workerId) { selectedWorker = db.workerDao().getWorkerByCard(workerId) }
                             WorkerProfileScreen(navController, selectedWorker)
                         }
-
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
                         composable("attendance") { AttendanceScreen(navController) }
@@ -69,7 +64,6 @@ class MainActivity : ComponentActivity() {
                         composable("production") { ProductionScreen(navController) }
                         composable("admin") { AdminScreen(navController) }
                         composable("admin_passwords") { ManagePasswordsScreen(navController) }
-
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
