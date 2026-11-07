@@ -46,17 +46,25 @@ class MainActivity : ComponentActivity() {
                                 }
                             } 
                         }
-                        // নতুন রুট: রেজিস্ট্রেশন
                         composable("register") { RegisterScreen(navController) }
                         
-                        composable("dashboard") { DashboardScreen(navController) }
+                        composable("dashboard") { 
+                            DashboardScreen(
+                                navController = navController, 
+                                role = currentUserRole, 
+                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User")
+                            ) 
+                        }
+                        
                         composable("worker_dashboard") { WorkerDashboardScreen(navController, loggedInWorker) }
+                        
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
                             LaunchedEffect(workerId) { selectedWorker = db.workerDao().getWorkerByCard(workerId) }
                             WorkerProfileScreen(navController, selectedWorker)
                         }
+                        
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
                         composable("attendance") { AttendanceScreen(navController) }
