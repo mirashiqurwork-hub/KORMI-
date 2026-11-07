@@ -11,13 +11,15 @@ interface WorkerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorker(worker: Worker)
 
-    // লগইন করার জন্য (কার্ড, ফোন বা ইমেইল দিয়ে খোঁজা)
     @Query("SELECT * FROM workers WHERE workerId = :id OR phone = :id")
     suspend fun getWorkerForLogin(id: String): Worker?
 
-    // নির্দিষ্ট কোম্পানির সব কর্মী
     @Query("SELECT * FROM workers WHERE companyId = :companyId ORDER BY fullName ASC")
     fun getWorkersByCompany(companyId: Int): Flow<List<Worker>>
+
+    // আগের স্ক্রিনগুলোর জন্য এটি দরকার
+    @Query("SELECT * FROM workers ORDER BY fullName ASC")
+    fun getAllWorkers(): Flow<List<Worker>>
 
     @Query("SELECT * FROM workers WHERE workerId = :workerId")
     suspend fun getWorkerByCard(workerId: String): Worker?
