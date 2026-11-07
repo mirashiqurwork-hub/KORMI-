@@ -4,9 +4,9 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -82,98 +82,101 @@ fun BreakdownScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        Column(
+        // ক্র্যাশ এড়ানোর জন্য পুরো স্ক্রিনটি LazyColumn দিয়ে তৈরি করা হলো
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF2F4F7))
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Date: $selectedDate", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
-            Spacer(Modifier.height(12.dp))
+            // ১. হেডার এবং ফর্ম
+            item {
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    Text("Date: $selectedDate", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
+                    Spacer(Modifier.height(8.dp))
 
-            // এন্ট্রি ফর্ম
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White), 
-                shape = RoundedCornerShape(12.dp), 
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        
-                        // Shift Dropdown (কাস্টম বক্স - ১০০% ক্র্যাশ ফ্রি)
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
-                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
-                            )
-                            Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
-                            DropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
-                                shifts.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { shift = s; expandedShift = false }) }
-                            }
-                        }
-
-                        // Section Dropdown (কাস্টম বক্স - ১০০% ক্র্যাশ ফ্রি)
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = section, onValueChange = {}, readOnly = true, label = { Text("Section") },
-                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
-                            )
-                            Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
-                            DropdownMenu(expanded = expandedSection, onDismissRequest = { expandedSection = false }) {
-                                sections.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { section = s; expandedSection = false }) }
-                            }
-                        }
-                    }
-                    
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = machineName, onValueChange = { machineName = it }, 
-                        label = { Text("Machine Name/No") }, modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = minutes, onValueChange = { minutes = it }, 
-                        label = { Text("Breakdown Time (Minutes)") }, modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = reason, onValueChange = { reason = it }, 
-                        label = { Text("Reason") }, modifier = Modifier.fillMaxWidth()
-                    )
-                    
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            if (machineName.isNotBlank() && minutes.isNotBlank()) {
-                                scope.launch {
-                                    db.breakdownDao().insertBreakdown(
-                                        Breakdown(
-                                            date = selectedDate, shift = shift, section = section,
-                                            machineName = machineName, minutes = minutes.toIntOrNull() ?: 0,
-                                            reason = reason, reportedBy = "Admin"
-                                        )
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White), 
+                        shape = RoundedCornerShape(12.dp), 
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                
+                                // Shift Dropdown (সিম্পল বক্স)
+                                Box(modifier = Modifier.weight(1f)) {
+                                    OutlinedTextField(
+                                        value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
+                                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
                                     )
-                                    machineName = ""; minutes = ""; reason = ""
+                                    Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
+                                    DropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
+                                        shifts.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { shift = s; expandedShift = false }) }
+                                    }
+                                }
+
+                                // Section Dropdown (সিম্পল বক্স)
+                                Box(modifier = Modifier.weight(1f)) {
+                                    OutlinedTextField(
+                                        value = section, onValueChange = {}, readOnly = true, label = { Text("Section") },
+                                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
+                                    DropdownMenu(expanded = expandedSection, onDismissRequest = { expandedSection = false }) {
+                                        sections.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { section = s; expandedSection = false }) }
+                                    }
                                 }
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Navy)
-                    ) { Text("Save Breakdown") }
+                            
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = machineName, onValueChange = { machineName = it }, 
+                                label = { Text("Machine Name/No") }, modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = minutes, onValueChange = { minutes = it }, 
+                                label = { Text("Breakdown Time (Minutes)") }, modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = reason, onValueChange = { reason = it }, 
+                                label = { Text("Reason") }, modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            Spacer(Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    if (machineName.isNotBlank() && minutes.isNotBlank()) {
+                                        scope.launch {
+                                            db.breakdownDao().insertBreakdown(
+                                                Breakdown(
+                                                    date = selectedDate, shift = shift, section = section,
+                                                    machineName = machineName, minutes = minutes.toIntOrNull() ?: 0,
+                                                    reason = reason, reportedBy = "Admin"
+                                                )
+                                            )
+                                            machineName = ""; minutes = ""; reason = ""
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                            ) { Text("Save Breakdown") }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-            Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
-            Spacer(Modifier.height(8.dp))
-
-            // লিস্ট ভিউ (Column দিয়ে তৈরি, যা ক্র্যাশ করে না)
-            breakdowns.forEach { bd ->
+            // ২. লিস্ট ভিউ
+            items(breakdowns) { bd ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White), 
                     shape = RoundedCornerShape(12.dp), 
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(12.dp), 
@@ -188,7 +191,11 @@ fun BreakdownScreen(navController: NavController) {
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            
+            // নিচে ফাঁকা জায়গা
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }
