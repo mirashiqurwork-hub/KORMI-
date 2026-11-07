@@ -18,37 +18,79 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.kormi.app.data.AppDatabase
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
-data class DashboardItem(val titleEn: String, val icon: ImageVector, val route: String)
+data class DashboardItem(val titleEn: String, val icon: ImageVector, val route: String, val allowedRoles: List<String>)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController, role: String, userName: String) {
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val scope = rememberCoroutineScope()
+
     var expandedMenu by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var fontSizeLarge by remember { mutableStateOf(false) }
 
-    val dashboardItems = listOf(
-        DashboardItem("Workers", Icons.Outlined.People, "workers"),
-        DashboardItem("Attendance", Icons.Outlined.CheckCircle, "attendance"),
-        DashboardItem("Manpower", Icons.Outlined.Groups, "manpower"),
-        DashboardItem("Production", Icons.Outlined.Build, "production"),
-        DashboardItem("Messages", Icons.Outlined.Chat, "messages"),
-        DashboardItem("Location", Icons.Outlined.LocationOn, "location"),
-        DashboardItem("Breakdown", Icons.Outlined.Warning, "breakdown"),
-        DashboardItem("Admin", Icons.Outlined.AdminPanelSettings, "admin")
+    // রিয়েল ডাটা স্টেট
+    var presentCount by remember { mutableStateOf("0") }
+    var absentCount by remember { mutableStateOf("0") }
+    var offDayCount by remember { mutableStateOf("0") }
+
+    // রোল অনুযায়ী ড্যাশবোর্ড আইটেম ফিল্টার
+    val allItems = listOf(
+        DashboardItem("Workers", Icons.Outlined.People, "workers", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Attendance", Icons.Outlined.CheckCircle, "attendance", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Manpower", Icons.Outlined.Groups, "manpower", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Production", Icons.Outlined.Build, "production", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Breakdown", Icons.Outlined.Warning, "breakdown", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Messages", Icons.Outlined.Chat, "messages", listOf("ADMIN", "Officer", "Management", "Worker")),
+        DashboardItem("Location", Icons.Outlined.LocationOn, "location", listOf("ADMIN", "Officer", "Management")),
+        DashboardItem("Admin", Icons.Outlined.AdminPanelSettings, "admin", listOf("ADMIN"))
     )
+    
+    val dashboardItems = allItems.filter { it.allowedRoles.contains(role) }
+
+    // আজকের ডাটা লোড করা
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val workers = db.workerDao().getAllActiveWorkersList()
+            val attendanceList = db.attendanceDao().getAttendanceByDate(today)
+            val attendanceMap = attendanceList.associate { it.workerId to it.status }
+
+            var present = 0
+            var absent = 0
+            var offDay = 0
+
+            workers.forEach { worker ->
+                when (attendanceMap[worker.workerId]) {
+                    "Present" -> present++
+                    "Absent" -> absent++
+                    "Off Day" -> offDay++
+                    else -> { /* Unmarked */ }
+                }
+            }
+            presentCount = present.toString()
+            absentCount = absent.toString()
+            offDayCount = offDay.toString()
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -93,7 +135,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 }
                 drawPath(path, Navy)
                 
-                // সোনালি বর্ডার লাইন
                 val goldPath = Path().apply {
                     moveTo(0f, 180f)
                     cubicTo(size.width * 0.3f, 230f, size.width * 0.7f, 130f, size.width, 180f)
@@ -147,7 +188,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     }
                 }
 
-                // Hero Card
+                // Hero Card (রিয়েল ডাটা)
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -159,15 +200,15 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = Gold)
                             Spacer(Modifier.width(8.dp))
-                            Text(text = "Workforce at a glance", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Workforce at a glance (Today)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            StatBox("Present", "231", Color(0xFF4CAF50), Modifier.weight(1f))
+                            StatBox("Present", presentCount, Color(0xFF4CAF50), Modifier.weight(1f))
                             Spacer(Modifier.width(8.dp))
-                            StatBox("Absent", "17", Color(0xFFF44336), Modifier.weight(1f))
+                            StatBox("Absent", absentCount, Color(0xFFF44336), Modifier.weight(1f))
                             Spacer(Modifier.width(8.dp))
-                            StatBox("Off Day", "12", Color(0xFFFFC107), Modifier.weight(1f))
+                            StatBox("Off Day", offDayCount, Color(0xFFFFC107), Modifier.weight(1f))
                         }
                     }
                 }
@@ -198,7 +239,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
             title = { Text("About", fontWeight = FontWeight.Bold, color = Navy) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    // আপনার ছবি এখানে বসবে (পরে আমরা res/drawable থেকে ছবি লোড করব)
                     Box(modifier = Modifier.size(100.dp).clip(CircleShape).background(Color.LightGray), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Person, contentDescription = "CEO", modifier = Modifier.size(60.dp), tint = Color.Gray)
                     }
