@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
@@ -46,17 +47,20 @@ fun ManpowerScreen(navController: NavController) {
     LaunchedEffect(selectedDateStr) {
         isLoading = true
         scope.launch {
-            val workers = db.workerDao().getAllActiveWorkersList()
+            // টাইপ নিশ্চিত করা হলো
+            val workerList: List<Worker> = db.workerDao().getAllActiveWorkersList()
             val attendanceList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
-            val attendanceMap = attendanceList.associate { it.workerId to it.status }
+            
+            // ম্যাপ তৈরি (টাইপ এক্সপ্লিসিটলি দেওয়া হলো)
+            val attendanceMap: Map<String, String> = attendanceList.associate { it.workerId to it.status }
 
             var present = 0
             var absent = 0
             var offDay = 0
             val secMap = mutableMapOf<String, Int>()
 
-            workers.forEach { worker ->
-                val status = attendanceMap[worker.workerId] ?: "Unmarked" 
+            workerList.forEach { worker ->
+                val status: String = attendanceMap[worker.workerId] ?: "Unmarked" 
                 when (status) {
                     "Present" -> {
                         present++
@@ -65,6 +69,9 @@ fun ManpowerScreen(navController: NavController) {
                     }
                     "Absent" -> absent++
                     "Off Day" -> offDay++
+                    else -> {
+                        // Unmarked বা অন্য কিছু হলে কিছুই করবে না
+                    }
                 }
             }
             totalPresent = present
