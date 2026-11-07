@@ -46,7 +46,7 @@ fun WorkersScreen(navController: NavController) {
     var isSyncing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান" // আপনার URL টি এখানে বসাবেন
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আপনার URL টি এখানে বসাবেন
 
     Scaffold(
         topBar = {
