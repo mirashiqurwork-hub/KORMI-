@@ -44,14 +44,10 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
     var expanded by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf(worker.photo) }
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             currentPhotoUri = uri.toString()
-            scope.launch {
-                db.workerDao().updatePhoto(worker.workerId, uri.toString())
-            }
+            scope.launch { db.workerDao().updatePhoto(worker.workerId, uri.toString()) }
         }
     }
 
@@ -64,23 +60,12 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
                         IconButton(onClick = { expanded = true }) {
                             Icon(Icons.Default.Person, contentDescription = "Menu", tint = Color.White)
                         }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Profile Settings") },
-                                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                                onClick = { expanded = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Logout") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                                onClick = { 
-                                    expanded = false
-                                    mainNavController.navigate("login") { popUpTo(0) { inclusive = true } } 
-                                }
-                            )
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(text = { Text("Profile Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { expanded = false })
+                            DropdownMenuItem(text = { Text("Logout") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { 
+                                expanded = false
+                                mainNavController.navigate("login") { popUpTo(0) { inclusive = true } } 
+                            })
                         }
                     }
                 },
@@ -88,25 +73,10 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(Navy.copy(alpha = 0.1f))
-                    .clickable { imagePickerLauncher.launch("image/*") },
-                contentAlignment = Alignment.Center
-            ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
                 if (currentPhotoUri != null) {
-                    AsyncImage(
-                        model = currentPhotoUri,
-                        contentDescription = "Profile Picture",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    AsyncImage(model = currentPhotoUri, contentDescription = "Profile", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
                     Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(60.dp))
                 }
@@ -114,25 +84,21 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
             Text("ছবি পরিবর্তন করতে ক্লিক করুন", fontSize = 11.sp, color = TextSecondary, modifier = Modifier.padding(top = 4.dp))
 
             Spacer(Modifier.height(16.dp))
-
             Text(text = worker.fullName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
             Text(text = "Card: ${worker.workerId}", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
-
             Spacer(Modifier.height(24.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ProfileRow("Phone", worker.phone)
-                    ProfileRow("Unit", worker.unit)
-                    ProfileRow("Section", worker.section)
-                    ProfileRow("Shift", if (worker.shift.isBlank()) "N/A" else worker.shift)
-                    ProfileRow("Weekly Off Day", if (worker.weeklyOffDay.isBlank()) "N/A" else worker.weeklyOffDay)
+                    ProfileRow("Role", worker.role)
+                    ProfileRow("Designation", worker.designation)
+                    ProfileRow("Unit", worker.unit ?: "N/A")
+                    ProfileRow("Section", worker.section ?: "N/A")
+                    ProfileRow("Shift", worker.shift ?: "N/A")
+                    ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
                     ProfileRow("Status", worker.status)
-                    ProfileRow("Address", if (worker.presentAddress.isNullOrBlank()) "N/A" else worker.presentAddress)
+                    ProfileRow("Address", worker.presentAddress ?: "N/A")
                 }
             }
         }
