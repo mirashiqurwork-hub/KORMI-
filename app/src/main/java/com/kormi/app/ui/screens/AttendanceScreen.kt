@@ -2,7 +2,6 @@ package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,24 +43,21 @@ fun AttendanceScreen(navController: NavController) {
     val calendar = Calendar.getInstance()
     var selectedDateStr by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)) }
     
-    // workerId -> Status
     var attendanceState by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isSaved by remember { mutableStateOf(false) }
 
-    // তারিখ পরিবর্তন হলে ডাটা লোড হবে
     LaunchedEffect(selectedDateStr, workers) {
         if (workers.isNotEmpty()) {
             val existingList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
             val existingMap = existingList.associate { it.workerId to it.status }
             
             val newMap = mutableMapOf<String, String>()
-            val dayOfWeek = getDayOfWeek(selectedDateStr) // e.g., SATURDAY
+            val dayOfWeek = getDayOfWeek(selectedDateStr)
             
             workers.forEach { worker ->
                 if (existingMap.containsKey(worker.workerId)) {
                     newMap[worker.workerId] = existingMap[worker.workerId]!!
                 } else {
-                    // যদি আগে থেকে সেভ না থাকে, তবে অফ-ডে চেক করবে
                     newMap[worker.workerId] = if (worker.weeklyOffDay.equals(dayOfWeek, ignoreCase = true)) "Off Day" else "Present"
                 }
             }
@@ -77,9 +73,7 @@ fun AttendanceScreen(navController: NavController) {
             cal.set(year, month, dayOfMonth)
             selectedDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
         },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
+        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
     Scaffold(
@@ -109,46 +103,30 @@ fun AttendanceScreen(navController: NavController) {
                         isSaved = true
                     }
                 },
-                containerColor = Gold,
-                contentColor = Navy
+                containerColor = Gold, contentColor = Navy
             ) {
                 Text("Save", fontWeight = FontWeight.Bold)
             }
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                if (isSaved) {
-                    Text(text = "Saved Successfully!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold)
-                }
+                if (isSaved) { Text(text = "Saved Successfully!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
             }
 
             if (workers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No Active Workers Found. Please Sync first.", color = TextSecondary)
+                    Text("No Active Workers Found.", color = TextSecondary)
                 }
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(workers) { worker ->
                         val currentStatus = attendanceState[worker.workerId] ?: "Present"
-                        AttendanceRow(
-                            worker = worker,
-                            status = currentStatus,
-                            onStatusChange = { newStatus ->
-                                attendanceState = attendanceState.toMutableMap().apply {
-                                    this[worker.workerId] = newStatus
-                                }
-                                isSaved = false
-                            }
-                        )
+                        AttendanceRow(worker = worker, status = currentStatus, onStatusChange = { newStatus ->
+                            attendanceState = attendanceState.toMutableMap().apply { this[worker.workerId] = newStatus }
+                            isSaved = false
+                        })
                     }
                 }
             }
@@ -158,30 +136,20 @@ fun AttendanceScreen(navController: NavController) {
 
 @Composable
 fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
                     Text(worker.fullName.take(1), color = Navy, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(worker.fullName, fontWeight = FontWeight.Bold, color = Navy)
-                    Text("Card: ${worker.workerId} | Off: ${worker.weeklyOffDay}", fontSize = 11.sp, color = TextSecondary)
+                    Text("Card: ${worker.workerId} | Off: ${worker.weeklyOffDay ?: "N/A"}", fontSize = 11.sp, color = TextSecondary)
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusButton("Present", status == "Present", Color(0xFF4CAF50)) { onStatusChange("Present") }
                 StatusButton("Absent", status == "Absent", Color(0xFFF44336)) { onStatusChange("Absent") }
                 StatusButton("Off Day", status == "Off Day", Color(0xFFFFC107)) { onStatusChange("Off Day") }
@@ -193,20 +161,14 @@ fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Un
 @Composable
 fun RowScope.StatusButton(text: String, isSelected: Boolean, color: Color, onClick: () -> Unit) {
     Button(
-        onClick = onClick,
-        modifier = Modifier.weight(1f).height(36.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) color else Color.LightGray.copy(alpha = 0.3f),
-            contentColor = if (isSelected) Color.White else Color.DarkGray
-        ),
-        contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(8.dp)
+        onClick = onClick, modifier = Modifier.weight(1f).height(36.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) color else Color.LightGray.copy(alpha = 0.3f), contentColor = if (isSelected) Color.White else Color.DarkGray),
+        contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(8.dp)
     ) {
         Text(text, fontSize = 12.sp)
     }
 }
 
-// দিনের নাম বের করার ফাংশন
 fun getDayOfWeek(dateStr: String): String {
     return try {
         val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -223,7 +185,5 @@ fun getDayOfWeek(dateStr: String): String {
             Calendar.FRIDAY -> "FRIDAY"
             else -> ""
         }
-    } catch (e: Exception) {
-        ""
-    }
+    } catch (e: Exception) { "" }
 }
