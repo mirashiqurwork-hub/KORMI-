@@ -133,7 +133,7 @@ fun BreakdownScreen(navController: NavController) {
                                         Breakdown(
                                             date = selectedDate, shift = shift, section = section,
                                             machineName = machineName, minutes = minutes.toIntOrNull() ?: 0,
-                                            reason = reason, reportedBy = "Admin" // আপাতত স্ট্যাটিক
+                                            reason = reason, reportedBy = "Admin"
                                         )
                                     )
                                     machineName = ""; minutes = ""; reason = ""
@@ -149,7 +149,8 @@ fun BreakdownScreen(navController: NavController) {
             Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // এখানে weight(1f) যোগ করা হয়েছে ক্র্যাশ ঠেকানোর জন্য
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(breakdowns) { bd ->
                     Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
