@@ -52,21 +52,16 @@ fun AddWorkerScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF2F4F7))
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             WorkerTextField("Full Name *", fullName) { fullName = it }
             WorkerTextField("Card Number *", cardNumber) { cardNumber = it }
             WorkerTextField("Phone Number", phone) { phone = it }
-            WorkerTextField("Unit (e.g., 02)", unit) { unit = it }
-            WorkerTextField("Section (e.g., Ring)", section) { section = it }
-            WorkerTextField("Shift (e.g., B)", shift) { shift = it }
-            WorkerTextField("Weekly Off Day (e.g., SATURDAY)", offDay) { offDay = it }
+            WorkerTextField("Unit", unit) { unit = it }
+            WorkerTextField("Section", section) { section = it }
+            WorkerTextField("Shift", shift) { shift = it }
+            WorkerTextField("Weekly Off Day", offDay) { offDay = it }
             WorkerTextField("Address", address) { address = it }
             WorkerTextField("Password *", password) { password = it }
 
@@ -78,8 +73,11 @@ fun AddWorkerScreen(navController: NavController) {
                         scope.launch {
                             val newWorker = Worker(
                                 workerId = cardNumber,
-                                photo = null,
                                 fullName = fullName,
+                                role = "Worker", // নতুন
+                                designation = "Helper", // নতুন
+                                companyId = 1, // নতুন
+                                photo = null,
                                 phone = phone,
                                 nidBirthCert = "",
                                 dateOfBirth = "",
@@ -89,7 +87,8 @@ fun AddWorkerScreen(navController: NavController) {
                                 weeklyOffDay = offDay,
                                 status = "Active",
                                 unit = unit,
-                                passwordHash = password
+                                passwordHash = password,
+                                salary = 500.0
                             )
                             db.workerDao().insertWorker(newWorker)
                             navController.popBackStack()
@@ -109,14 +108,8 @@ fun AddWorkerScreen(navController: NavController) {
 @Composable
 fun WorkerTextField(label: String, value: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White
-        )
+        value = value, onValueChange = onValueChange, label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
     )
 }
