@@ -32,12 +32,15 @@ class MainActivity : ComponentActivity() {
                     
                     var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
                     var currentUserId by remember { mutableStateOf("") }
+                    var currentUserRole by remember { mutableStateOf("") }
 
                     NavHost(navController = navController, startDestination = "login") {
                         composable("login") { 
-                            LoginScreen(navController) { userId ->
+                            // এখানে ২টি প্যারামিটার নেওয়া হচ্ছে (ID এবং Role)
+                            LoginScreen(navController) { userId, role ->
                                 currentUserId = userId
-                                if (userId != "ADMIN") {
+                                currentUserRole = role
+                                if (role != "ADMIN") {
                                     scope.launch {
                                         loggedInWorker = db.workerDao().getWorkerByCard(userId)
                                     }
