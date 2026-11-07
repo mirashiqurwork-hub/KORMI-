@@ -40,45 +40,33 @@ fun ManpowerScreen(navController: NavController) {
     var totalPresent by remember { mutableStateOf(0) }
     var totalAbsent by remember { mutableStateOf(0) }
     var totalOffDay by remember { mutableStateOf(0) }
-    var totalWorkers by remember { mutableStateOf(0) }
-    
-    // Section -> Present Count
     var sectionSummary by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // ডাটা লোড এবং ক্যালকুলেট করার ফাংশন
-    fun loadData(date: String) {
+    LaunchedEffect(selectedDateStr) {
         isLoading = true
         scope.launch {
             val workers = db.workerDao().getAllActiveWorkersList()
-            val attendanceList = db.attendanceDao().getAttendanceByDate(date)
+            val attendanceList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
             val attendanceMap = attendanceList.associate { it.workerId to it.status }
 
-            totalWorkers = workers.size
             var present = 0
             var absent = 0
             var offDay = 0
-            
             val secMap = mutableMapOf<String, Int>()
 
             workers.forEach { worker ->
-                // যদি ওই দিনের ডাটা না থাকে, তবে ডিফল্টভাবে Present ধরা হবে (অথবা আপনি Absent ধরতে পারেন)
-                // এখানে যেহেতু Attendance স্ক্রিনে ডিফল্ট Present থাকে, তাই এখানেও Present ধরছি।
                 val status = attendanceMap[worker.workerId] ?: "Unmarked" 
-                
                 when (status) {
                     "Present" -> {
                         present++
-                        secMap[worker.section] = (secMap[worker.section] ?: 0) + 1
+                        val sec = worker.section ?: "Unknown"
+                        secMap[sec] = (secMap[sec] ?: 0) + 1
                     }
                     "Absent" -> absent++
                     "Off Day" -> offDay++
-                    "Unmarked" -> {
-                         // যদি ওই দিনের এটেনডেন্স সেভ না করা থাকে
-                    }
                 }
             }
-
             totalPresent = present
             totalAbsent = absent
             totalOffDay = offDay
@@ -87,21 +75,12 @@ fun ManpowerScreen(navController: NavController) {
         }
     }
 
-    // তারিখ পরিবর্তন হলে বা প্রথমবার স্ক্রিনে ঢুকলে ডাটা লোড হবে
-    LaunchedEffect(selectedDateStr) {
-        loadData(selectedDateStr)
-    }
-
     val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
+        context, { _, year, month, dayOfMonth ->
             val cal = Calendar.getInstance()
             cal.set(year, month, dayOfMonth)
             selectedDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
     Scaffold(
@@ -122,36 +101,17 @@ fun ManpowerScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFF2F4F7))
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Report Date: $selectedDateStr",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Navy,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7)).padding(16.dp)) {
+            Text(text = "Report Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.padding(bottom = 16.dp))
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Navy)
-                }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Navy) }
             } else {
-                // Totals Summary Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SummaryCard("Present", totalPresent.toString(), Color(0xFF4CAF50), Modifier.weight(1f))
                     SummaryCard("Absent", totalAbsent.toString(), Color(0xFFF44336), Modifier.weight(1f))
                     SummaryCard("Off Day", totalOffDay.toString(), Color(0xFFFFC107), Modifier.weight(1f))
                 }
-
                 Spacer(Modifier.height(24.dp))
                 Text("Section-wise Present", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(12.dp))
@@ -172,16 +132,8 @@ fun ManpowerScreen(navController: NavController) {
 
 @Composable
 fun SummaryCard(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Card(modifier = modifier, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
             Text(text = title, fontSize = 12.sp, color = TextSecondary)
         }
@@ -190,16 +142,8 @@ fun SummaryCard(title: String, value: String, color: Color, modifier: Modifier =
 
 @Composable
 fun SectionRow(section: String, count: Int) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(text = section, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Navy)
             Text(text = "$count", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Gold)
         }
