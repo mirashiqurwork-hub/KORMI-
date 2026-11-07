@@ -17,15 +17,15 @@ interface WorkerDao {
     @Query("SELECT * FROM workers WHERE companyId = :companyId ORDER BY fullName ASC")
     fun getWorkersByCompany(companyId: Int): Flow<List<Worker>>
 
-    // আগের স্ক্রিনগুলোর জন্য এটি দরকার
     @Query("SELECT * FROM workers ORDER BY fullName ASC")
     fun getAllWorkers(): Flow<List<Worker>>
 
+    // Attendance স্ক্রিনের জন্য এটি দরকার
+    @Query("SELECT * FROM workers WHERE status = 'Active'")
+    fun getAllActiveWorkers(): Flow<List<Worker>>
+
     @Query("SELECT * FROM workers WHERE workerId = :workerId")
     suspend fun getWorkerByCard(workerId: String): Worker?
-
-    @Query("SELECT * FROM workers WHERE status = 'Active'")
-    suspend fun getAllActiveWorkersList(): List<Worker>
 
     @Query("UPDATE workers SET passwordHash = :newPassword WHERE workerId = :workerId")
     suspend fun updatePassword(workerId: String, newPassword: String)
