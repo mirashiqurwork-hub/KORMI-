@@ -45,9 +45,6 @@ fun BreakdownScreen(navController: NavController) {
     var minutes by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
 
-    val shifts = listOf("A", "B", "C", "P/A", "P/B", "P/C")
-    val sections = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")
-
     // ডাটাবেস থেকে ওই তারিখের ব্রেকডাউন লিস্ট
     val breakdowns by db.breakdownDao().getBreakdownsByDate(selectedDate).collectAsState(initial = emptyList())
 
@@ -77,7 +74,6 @@ fun BreakdownScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        // ১০০% ক্র্যাশ-ফ্রি স্ক্রলযোগ্য কলাম
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,76 +90,77 @@ fun BreakdownScreen(navController: NavController) {
                 shape = RoundedCornerShape(12.dp), 
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     
-                    // Shift Selection (Chips)
-                    Text("Select Shift", fontSize = 12.sp, color = TextSecondary)
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        shifts.take(3).forEach { s -> 
-                            FilterChip(selected = shift == s, onClick = { shift = s }, label = { Text(s) }) 
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        shifts.drop(3).forEach { s -> 
-                            FilterChip(selected = shift == s, onClick = { shift = s }, label = { Text(s) }) 
-                        }
-                    }
+                    // Shift (সাধারণ টেক্সট বক্স)
+                    OutlinedTextField(
+                        value = shift, 
+                        onValueChange = { shift = it }, 
+                        label = { Text("Shift (A, B, C)") }, 
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                    // Section Selection (Chips)
-                    Text("Select Section", fontSize = 12.sp, color = TextSecondary)
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        sections.take(2).forEach { s -> 
-                            FilterChip(selected = section == s, onClick = { section = s }, label = { Text(s) }) 
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        sections.drop(2).forEach { s -> 
-                            FilterChip(selected = section == s, onClick = { section = s }, label = { Text(s) }) 
-                        }
-                    }
-                    
-                    Spacer(Modifier.height(8.dp))
+                    // Section (সাধারণ টেক্সট বক্স)
                     OutlinedTextField(
-                        value = machineName, onValueChange = { machineName = it }, 
-                        label = { Text("Machine Name/No") }, modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = minutes, onValueChange = { minutes = it }, 
-                        label = { Text("Breakdown Time (Minutes)") }, modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = reason, onValueChange = { reason = it }, 
-                        label = { Text("Reason") }, modifier = Modifier.fillMaxWidth()
+                        value = section, 
+                        onValueChange = { section = it }, 
+                        label = { Text("Section (BACKSIDE, RING)") }, 
+                        modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = machineName, 
+                        onValueChange = { machineName = it }, 
+                        label = { Text("Machine Name/No") }, 
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    OutlinedTextField(
+                        value = minutes, 
+                        onValueChange = { minutes = it }, 
+                        label = { Text("Breakdown Time (Minutes)") }, 
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    OutlinedTextField(
+                        value = reason, 
+                        onValueChange = { reason = it }, 
+                        label = { Text("Reason") }, 
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
                     Button(
                         onClick = {
                             if (machineName.isNotBlank() && minutes.isNotBlank()) {
                                 scope.launch {
                                     db.breakdownDao().insertBreakdown(
                                         Breakdown(
-                                            date = selectedDate, shift = shift, section = section,
-                                            machineName = machineName, minutes = minutes.toIntOrNull() ?: 0,
-                                            reason = reason, reportedBy = "Admin"
+                                            date = selectedDate, 
+                                            shift = shift, 
+                                            section = section,
+                                            machineName = machineName, 
+                                            minutes = minutes.toIntOrNull() ?: 0,
+                                            reason = reason, 
+                                            reportedBy = "Admin"
                                         )
                                     )
                                     machineName = ""; minutes = ""; reason = ""
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Navy)
-                    ) { Text("Save Breakdown") }
+                        modifier = Modifier.fillMaxWidth().height(50.dp), 
+                        colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                    ) { 
+                        Text("Save Breakdown") 
+                    }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            // লিস্ট ভিউ (Column দিয়ে, কোনো LazyColumn নেই)
+            // লিস্ট ভিউ (কোনো জটিল লেআউট নেই)
             breakdowns.forEach { bd ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White), 
