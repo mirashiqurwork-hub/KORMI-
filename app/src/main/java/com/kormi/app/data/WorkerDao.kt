@@ -20,9 +20,12 @@ interface WorkerDao {
     @Query("SELECT * FROM workers ORDER BY fullName ASC")
     fun getAllWorkers(): Flow<List<Worker>>
 
-    // Attendance স্ক্রিনের জন্য এটি দরকার
+    // Manpower এবং Attendance স্ক্রিনের জন্য এই ২টি ফাংশন যুক্ত করা হলো
     @Query("SELECT * FROM workers WHERE status = 'Active'")
     fun getAllActiveWorkers(): Flow<List<Worker>>
+
+    @Query("SELECT * FROM workers WHERE status = 'Active'")
+    suspend fun getAllActiveWorkersList(): List<Worker>
 
     @Query("SELECT * FROM workers WHERE workerId = :workerId")
     suspend fun getWorkerByCard(workerId: String): Worker?
