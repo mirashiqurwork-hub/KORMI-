@@ -2,12 +2,14 @@ package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,7 +82,6 @@ fun BreakdownScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        // ক্র্যাশ এড়ানোর জন্য LazyColumn এর বদলে verticalScroll ব্যবহার করা হয়েছে
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -101,57 +102,27 @@ fun BreakdownScreen(navController: NavController) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         
-                        // Shift Dropdown (Material 3 Standard)
-                        ExposedDropdownMenuBox(
-                            expanded = expandedShift,
-                            onExpandedChange = { expandedShift = it },
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        // Shift Dropdown (কাস্টম বক্স - ১০০% ক্র্যাশ ফ্রি)
+                        Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
-                                value = shift,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Shift") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedShift) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
+                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
                             )
-                            ExposedDropdownMenu(
-                                expanded = expandedShift,
-                                onDismissRequest = { expandedShift = false }
-                            ) {
-                                shifts.forEach { s ->
-                                    DropdownMenuItem(
-                                        text = { Text(s) },
-                                        onClick = { shift = s; expandedShift = false }
-                                    )
-                                }
+                            Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
+                            DropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
+                                shifts.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { shift = s; expandedShift = false }) }
                             }
                         }
 
-                        // Section Dropdown (Material 3 Standard)
-                        ExposedDropdownMenuBox(
-                            expanded = expandedSection,
-                            onExpandedChange = { expandedSection = it },
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        // Section Dropdown (কাস্টম বক্স - ১০০% ক্র্যাশ ফ্রি)
+                        Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
-                                value = section,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Section") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSection) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                value = section, onValueChange = {}, readOnly = true, label = { Text("Section") },
+                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
                             )
-                            ExposedDropdownMenu(
-                                expanded = expandedSection,
-                                onDismissRequest = { expandedSection = false }
-                            ) {
-                                sections.forEach { s ->
-                                    DropdownMenuItem(
-                                        text = { Text(s) },
-                                        onClick = { section = s; expandedSection = false }
-                                    )
-                                }
+                            Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
+                            DropdownMenu(expanded = expandedSection, onDismissRequest = { expandedSection = false }) {
+                                sections.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { section = s; expandedSection = false }) }
                             }
                         }
                     }
@@ -197,7 +168,7 @@ fun BreakdownScreen(navController: NavController) {
             Text("Today's Breakdowns", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            // লিস্ট ভিউ (Column দিয়ে তৈরি, যা ১০০% ক্র্যাশ-ফ্রি)
+            // লিস্ট ভিউ (Column দিয়ে তৈরি, যা ক্র্যাশ করে না)
             breakdowns.forEach { bd ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White), 
@@ -217,7 +188,7 @@ fun BreakdownScreen(navController: NavController) {
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp)) // নিচে একটু ফাঁকা জায়গা
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
