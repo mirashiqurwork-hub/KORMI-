@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,10 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,7 +46,7 @@ fun WorkersScreen(navController: NavController) {
     var isSyncing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আগের URL টি এখানে থাকবে
+    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান" // আপনার URL টি এখানে বসাবেন
 
     Scaffold(
         topBar = {
@@ -80,11 +78,7 @@ fun WorkersScreen(navController: NavController) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("add_worker") },
-                containerColor = Navy,
-                contentColor = Color.White
-            ) {
+            FloatingActionButton(onClick = { navController.navigate("add_worker") }, containerColor = Navy, contentColor = Color.White) {
                 Icon(Icons.Default.Add, contentDescription = "Add Worker")
             }
         }
@@ -99,12 +93,8 @@ fun WorkersScreen(navController: NavController) {
                     Text("কোনো কর্মী পাওয়া যায়নি। রিফ্রেশ বাটনে ক্লিক করুন।", color = TextSecondary)
                 }
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(workers) { worker ->
-                        // নেভিগেশন পাস করা হলো
                         WorkerCard(worker, navController)
                     }
                 }
@@ -132,8 +122,11 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                     val obj = jsonArray.getJSONObject(i)
                     val worker = Worker(
                         workerId = obj.getString("workerId"),
-                        photo = obj.optString("photo", ""),
                         fullName = obj.getString("fullName"),
+                        role = "Worker", // নতুন
+                        designation = "Helper", // নতুন
+                        companyId = 1, // নতুন
+                        photo = obj.optString("photo", ""),
                         phone = obj.optString("phone", ""),
                         nidBirthCert = obj.optString("nid", ""),
                         dateOfBirth = obj.optString("dob", ""),
@@ -143,7 +136,8 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                         weeklyOffDay = obj.optString("offDay", ""),
                         status = if (obj.optString("status") == "Active") "Active" else "Inactive",
                         unit = obj.optString("unit", ""),
-                        passwordHash = "1234" // ডিফল্ট পাসওয়ার্ড
+                        passwordHash = "1234",
+                        salary = 500.0
                     )
                     db.workerDao().insertWorker(worker)
                     count++
@@ -165,33 +159,23 @@ fun WorkerCard(worker: Worker, navController: NavController) {
     val context = LocalContext.current
     
     Card(
-        onClick = { navController.navigate("worker_details/${worker.workerId}") }, // প্রোফাইলে যাওয়ার ক্লিক
+        onClick = { navController.navigate("worker_details/${worker.workerId}") },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(30.dp))
             }
-            
             Spacer(Modifier.width(16.dp))
-            
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = worker.fullName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
                 Text(text = "Card: ${worker.workerId}", fontSize = 12.sp, color = TextSecondary)
-                Text(text = "Section: ${worker.section}", fontSize = 12.sp, color = TextSecondary)
+                Text(text = "Section: ${worker.section ?: "N/A"}", fontSize = 12.sp, color = TextSecondary)
             }
-            
-            // ফোন কল করার ইভেন্ট
             IconButton(onClick = {
                 if (worker.phone.isNotBlank()) {
                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${worker.phone}"))
