@@ -40,9 +40,7 @@ class MainActivity : ComponentActivity() {
                                 currentUserId = userId
                                 currentUserRole = role
                                 if (role != "ADMIN") {
-                                    scope.launch {
-                                        loggedInWorker = db.workerDao().getWorkerByCard(userId)
-                                    }
+                                    scope.launch { loggedInWorker = db.workerDao().getWorkerByCard(userId) }
                                 }
                             } 
                         }
@@ -69,9 +67,15 @@ class MainActivity : ComponentActivity() {
                         composable("add_worker") { AddWorkerScreen(navController) }
                         composable("attendance") { AttendanceScreen(navController) }
                         composable("manpower") { ManpowerScreen(navController) }
+                        
+                        // এখানে প্রোডাকশন এবং ব্রেকডাউন রুট নিশ্চিত করা হলো
                         composable("production") { ProductionScreen(navController) }
+                        composable("breakdown") { BreakdownScreen(navController) }
+                        
                         composable("admin") { AdminScreen(navController) }
                         composable("admin_passwords") { ManagePasswordsScreen(navController) }
+                        composable("add_company") { AddCompanyScreen(navController) }
+                        
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
