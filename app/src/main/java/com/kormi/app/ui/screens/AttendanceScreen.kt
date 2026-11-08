@@ -125,27 +125,26 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                             }
                         }
                         
-                        // নোটিফিকেশন তৈরি করা
-                        val senderName = loggedInWorker?.fullName ?: "Admin"
-                        val senderDesignation = loggedInWorker?.designation ?: "System Admin"
-                        val unitInfo = loggedInWorker?.unit ?: "ALL"
-                        val shiftInfo = loggedInWorker?.shift ?: "ALL"
-                        val sectionInfo = loggedInWorker?.section ?: "ALL"
-
-                        val notifMessage = "ইউনিট: $unitInfo, শিফট: $shiftInfo, সেকশন: $sectionInfo\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
-                        
-                        db.notificationDao().insertNotification(
-                            Notification(
-                                title = "Attendance Submitted",
-                                message = notifMessage,
-                                senderName = senderName,
-                                senderDesignation = senderDesignation,
-                                isPinned = false
+                        // নোটিফিকেশন তৈরি করা (অফিসার/ম্যানেজমেন্টের জন্য)
+                        if (loggedInWorker != null) {
+                            val notifMessage = "ইউনিট: ${loggedInWorker.unit}, শিফট: ${loggedInWorker.shift}, সেকশন: ${loggedInWorker.section}\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
+                            
+                            db.notificationDao().insertNotification(
+                                Notification(
+                                    companyId = loggedInWorker.companyId, // অটোমেটিক নিজের কোম্পানি
+                                    targetUnit = loggedInWorker.unit ?: "ALL UNIT",
+                                    targetRole = "Management", // এই নোটিশ ম্যানেজমেন্ট দেখবে
+                                    title = "Attendance Submitted by ${loggedInWorker.fullName}",
+                                    message = notifMessage,
+                                    senderName = loggedInWorker.fullName,
+                                    senderDesignation = loggedInWorker.designation,
+                                    isPinned = false
+                                )
                             )
-                        )
+                        }
 
                         isSaved = true
-                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 containerColor = Gold, contentColor = Navy
