@@ -38,7 +38,7 @@ data class DashboardItem(val titleEn: String, val icon: ImageVector, val route: 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(navController: NavController, role: String, userName: String) {
+fun DashboardScreen(navController: NavController, role: String, userName: String, userId: String) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
@@ -47,12 +47,10 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     var showAboutDialog by remember { mutableStateOf(false) }
     var fontSizeLarge by remember { mutableStateOf(false) }
 
-    // রিয়েল ডাটা স্টেট
     var presentCount by remember { mutableStateOf("0") }
     var absentCount by remember { mutableStateOf("0") }
     var offDayCount by remember { mutableStateOf("0") }
 
-    // রোল অনুযায়ী ড্যাশবোর্ড আইটেম ফিল্টার
     val allItems = listOf(
         DashboardItem("Workers", Icons.Outlined.People, "workers", listOf("ADMIN", "Officer", "Management")),
         DashboardItem("Attendance", Icons.Outlined.CheckCircle, "attendance", listOf("ADMIN", "Officer", "Management")),
@@ -66,7 +64,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     
     val dashboardItems = allItems.filter { it.allowedRoles.contains(role) }
 
-    // আজকের ডাটা লোড করা
     LaunchedEffect(Unit) {
         scope.launch {
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -83,7 +80,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     "Present" -> present++
                     "Absent" -> absent++
                     "Off Day" -> offDay++
-                    else -> { /* Unmarked */ }
                 }
             }
             presentCount = present.toString()
@@ -124,7 +120,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding)) {
             
-            // সোনালি ঢেউ (Golden Wave) ডিজাইন
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val path = Path().apply {
                     moveTo(0f, 180f)
@@ -146,7 +141,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
-                // Top Header
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -164,11 +158,34 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                             }
                         }
                         DropdownMenu(expanded = expandedMenu, onDismissRequest = { expandedMenu = false }) {
-                            DropdownMenuItem(text = { Text("Edit Profile") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { expandedMenu = false })
+                            DropdownMenuItem(
+                                text = { Text("Edit Profile") }, 
+                                leadingIcon = { Icon(Icons.Default.Edit, null) }, 
+                                onClick = { 
+                                    expandedMenu = false
+                                    navController.navigate("worker_details/$userId") 
+                                }
+                            )
+                            
+                            if (role != "Worker") {
+                                DropdownMenuItem(
+                                    text = { Text("Manage Passwords") }, 
+                                    leadingIcon = { Icon(Icons.Default.Lock, null) }, 
+                                    onClick = { 
+                                        expandedMenu = false
+                                        navController.navigate("admin_passwords") 
+                                    }
+                                )
+                            }
+
                             DropdownMenuItem(
                                 text = { Text(if (fontSizeLarge) "Normal Font" else "Large Font") }, 
                                 leadingIcon = { Icon(Icons.Default.FormatSize, null) }, 
-                                onClick = { fontSizeLarge = !fontSizeLarge; expandedMenu = false }
+                                onClick = { 
+                                    fontSizeLarge = !fontSizeLarge
+                                    android.widget.Toast.makeText(context, "ফন্ট সাইজ অপশনটি পরবর্তী ধাপে কার্যকর হবে", android.widget.Toast.LENGTH_SHORT).show()
+                                    expandedMenu = false 
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("About") }, 
@@ -188,7 +205,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     }
                 }
 
-                // Hero Card (রিয়েল ডাটা)
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -216,7 +232,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
-                // Grid Items
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -232,7 +247,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
         }
     }
 
-    // About Dialog (ফাউন্ডারের তথ্য)
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
