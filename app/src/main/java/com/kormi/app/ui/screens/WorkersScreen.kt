@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -44,16 +45,28 @@ fun WorkersScreen(navController: NavController) {
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
     
-    val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
+    val allWorkers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
     
+    // সার্চ স্টেট
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // সার্চ ফিল্টার লজিক (নাম, আইডি, ফোন বা ঠিকানা দিয়ে খোঁজা)
+    val filteredWorkers = allWorkers.filter { worker ->
+        worker.fullName.contains(searchQuery, ignoreCase = true) ||
+        worker.workerId.contains(searchQuery) ||
+        worker.phone.contains(searchQuery) ||
+        (worker.presentAddress?.contains(searchQuery, ignoreCase = true) == true) ||
+        (worker.section?.contains(searchQuery, ignoreCase = true) == true) ||
+        (worker.unit?.contains(searchQuery, ignoreCase = true) == true)
+    }
+
     // Pull to Refresh স্টেট
     var isRefreshing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
     // ⚠️ এখানে আপনার Apps Script এর URL টি কোটেশন চিহ্নসহ বসাবেন
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
+    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
 
-    // রিফ্রেশ করার ফাংশন
     val onRefresh: () -> Unit = {
         isRefreshing = true
         syncStatus = "Syncing..."
@@ -87,44 +100,69 @@ fun WorkersScreen(navController: NavController) {
         }
     ) { padding ->
         
-        // Material 3 এর PullToRefreshBox
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFFF2F4F7))
         ) {
-            // LazyColumn কে fillMaxSize() দেওয়া হলো, যাতে পুরো স্ক্রিন জুড়ে টান দেওয়া যায়
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp), 
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (syncStatus.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = syncStatus, 
-                            color = Navy, 
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                }
+            // গুগল স্টাইলের সার্চ বার
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search by Name, ID, Phone...", fontSize = 14.sp) },
+                trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Navy) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp), // গোলাকার বা ক্যাপসুল শেইপ
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Navy.copy(alpha = 0.5f),
+                    unfocusedBorderColor = Color.LightGray
+                ),
+                singleLine = true
+            )
 
-                if (workers.isEmpty() && !isRefreshing) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(top = 50.dp), 
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("কোনো কর্মী পাওয়া যায়নি। উপরে টান দিয়ে রিফ্রেশ করুন।", color = TextSecondary)
+            // Pull to Refresh বক্স
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), 
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (syncStatus.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = syncStatus, 
+                                color = Navy, 
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
                         }
                     }
-                } else {
-                    items(workers) { worker ->
-                        WorkerCard(worker, navController)
+
+                    if (filteredWorkers.isEmpty() && !isRefreshing) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(top = 50.dp), 
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if(searchQuery.isEmpty()) "কোনো কর্মী পাওয়া যায়নি। উপরে টান দিয়ে রিফ্রেশ করুন।" else "এই সার্চে কোনো কর্মী পাওয়া যায়নি।", 
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    } else {
+                        items(filteredWorkers) { worker ->
+                            WorkerCard(worker, navController)
+                        }
                     }
                 }
             }
@@ -203,7 +241,7 @@ fun WorkerCard(worker: Worker, navController: NavController) {
                 Text(text = worker.fullName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
                 Text(text = "Card: ${worker.workerId}", fontSize = 12.sp, color = TextSecondary)
-                Text(text = "Section: ${worker.section ?: "N/A"}", fontSize = 12.sp, color = TextSecondary)
+                Text(text = "Section: ${worker.section ?: "N/A"} | Unit: ${worker.unit ?: "N/A"}", fontSize = 12.sp, color = TextSecondary)
             }
             IconButton(onClick = {
                 if (worker.phone.isNotBlank()) {
