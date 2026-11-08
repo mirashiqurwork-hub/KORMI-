@@ -62,10 +62,5 @@ fun ModulePlaceholderScreen(
     }
 }
 
-// MessagesScreen বাদ দেওয়া হয়েছে
-
 @Composable
 fun LocationScreen(nav: NavController) = ModulePlaceholderScreen("অবস্থান", "Location", nav, "লাইভ লোকেশন শেয়ারিং পরবর্তী ধাপে আসবে।")
-
-@Composable
-fun NotificationsScreen(nav: NavController) = ModulePlaceholderScreen("বিজ্ঞপ্তি", "Notifications", nav, "পুশ ও ইন-অ্যাপ বিজ্ঞপ্তি পরবর্তী ধাপে আসবে।")
