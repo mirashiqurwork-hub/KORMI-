@@ -68,8 +68,9 @@ class MainActivity : ComponentActivity() {
                         composable("attendance") { AttendanceScreen(navController) }
                         composable("manpower") { ManpowerScreen(navController) }
                         
-                        // এখানে প্রোডাকশন এবং ব্রেকডাউন রুট নিশ্চিত করা হলো
                         composable("production") { ProductionScreen(navController) }
+                        composable("production_calculator") { ProductionCalculatorScreen(navController) } // নতুন রুট
+                        
                         composable("breakdown") { BreakdownScreen(navController) }
                         
                         composable("admin") { AdminScreen(navController) }
