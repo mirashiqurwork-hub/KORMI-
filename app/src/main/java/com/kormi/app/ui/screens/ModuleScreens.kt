@@ -61,6 +61,3 @@ fun ModulePlaceholderScreen(
         }
     }
 }
-
-@Composable
-fun LocationScreen(nav: NavController) = ModulePlaceholderScreen("অবস্থান", "Location", nav, "লাইভ লোকেশন শেয়ারিং পরবর্তী ধাপে আসবে।")
