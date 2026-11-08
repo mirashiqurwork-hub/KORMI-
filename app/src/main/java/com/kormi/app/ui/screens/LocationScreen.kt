@@ -1,6 +1,7 @@
 package com.kormi.app.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
@@ -9,7 +10,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -58,16 +58,14 @@ fun LocationScreen(navController: NavController, loggedInWorker: Worker?, curren
         }
     }
 
-    // লোকেশন আপডেট ফাংশন
     fun updateLocation() {
         if (!hasPermission) {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             return
         }
 
-        val locationManager = context.getSystemService(context.LOCATION_SERVICE) as LocationManager
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
-            // নেটওয়ার্ক বা জিপিএস থেকে সর্বশেষ লোকেশন নেওয়া
             val location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) 
                 ?: locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
@@ -104,7 +102,6 @@ fun LocationScreen(navController: NavController, loggedInWorker: Worker?, curren
         }
     ) { padding ->
         if (!hasPermission) {
-            // পারমিশন না থাকলে এই স্ক্রিন দেখাবে
             Box(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
@@ -121,7 +118,6 @@ fun LocationScreen(navController: NavController, loggedInWorker: Worker?, curren
             }
         } else {
             if (currentUserRole == "Worker") {
-                // ওয়ার্কারের জন্য শুধু নিজের লোকেশন আপডেট করার স্ক্রিন
                 Box(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("আপনার বর্তমান লোকেশন আপডেট করুন", fontWeight = FontWeight.Bold, color = Navy, fontSize = 18.sp)
@@ -139,7 +135,6 @@ fun LocationScreen(navController: NavController, loggedInWorker: Worker?, curren
                     }
                 }
             } else {
-                // অ্যাডমিন/অফিসারের জন্য সব কর্মীর লোকেশন লিস্ট
                 val allWorkers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
                 val workersWithLocation = allWorkers.filter { it.latitude != null && it.longitude != null }
 
@@ -171,14 +166,12 @@ fun LocationScreen(navController: NavController, loggedInWorker: Worker?, curren
                                     }
                                     IconButton(
                                         onClick = {
-                                            // ফোনের গুগল ম্যাপ অ্যাপে লোকেশন ওপেন করা
                                             val uri = Uri.parse("geo:${worker.latitude},${worker.longitude}?q=${worker.latitude},${worker.longitude}(${Uri.encode(worker.fullName)})")
                                             val intent = Intent(Intent.ACTION_VIEW, uri)
                                             intent.setPackage("com.google.android.apps.maps")
                                             if (intent.resolveActivity(context.packageManager) != null) {
                                                 context.startActivity(intent)
                                             } else {
-                                                // গুগল ম্যাপ না থাকলে ডিফল্ট ম্যাপে ওপেন হবে
                                                 context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                             }
                                         }
