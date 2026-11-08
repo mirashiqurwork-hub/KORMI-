@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Attendance
+import com.kormi.app.data.Notification
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
@@ -40,14 +41,12 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
 
     val allWorkers by db.workerDao().getAllActiveWorkers().collectAsState(initial = emptyList())
     
-    // রোল অনুযায়ী কর্মী ফিল্টার
     val filteredWorkers = remember(allWorkers, loggedInWorker) {
         if (loggedInWorker == null || loggedInWorker.role == "Admin") {
-            allWorkers // অ্যাডমিন সব দেখবে
+            allWorkers
         } else if (loggedInWorker.role == "Management") {
             allWorkers.filter { it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT" }
         } else {
-            // অফিসার বা সুপারভাইজার শুধু তার সেকশন ও শিফট দেখবে
             allWorkers.filter { 
                 (it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT") &&
                 (it.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION") &&
@@ -113,10 +112,40 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
             FloatingActionButton(
                 onClick = {
                     scope.launch {
+                        var presentCount = 0
+                        var absentCount = 0
+                        var offDayCount = 0
+
                         attendanceState.forEach { (workerId, status) ->
                             db.attendanceDao().insertOrUpdate(Attendance(workerId, selectedDateStr, status))
+                            when(status) {
+                                "Present" -> presentCount++
+                                "Absent" -> absentCount++
+                                "Off Day" -> offDayCount++
+                            }
                         }
+                        
+                        // নোটিফিকেশন তৈরি করা
+                        val senderName = loggedInWorker?.fullName ?: "Admin"
+                        val senderDesignation = loggedInWorker?.designation ?: "System Admin"
+                        val unitInfo = loggedInWorker?.unit ?: "ALL"
+                        val shiftInfo = loggedInWorker?.shift ?: "ALL"
+                        val sectionInfo = loggedInWorker?.section ?: "ALL"
+
+                        val notifMessage = "ইউনিট: $unitInfo, শিফট: $shiftInfo, সেকশন: $sectionInfo\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
+                        
+                        db.notificationDao().insertNotification(
+                            Notification(
+                                title = "Attendance Submitted",
+                                message = notifMessage,
+                                senderName = senderName,
+                                senderDesignation = senderDesignation,
+                                isPinned = false
+                            )
+                        )
+
                         isSaved = true
+                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 containerColor = Gold, contentColor = Navy
