@@ -9,9 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Company
 import com.kormi.app.data.Notification
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
@@ -44,36 +41,47 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
     val allNotifications by db.notificationDao().getAllNotifications().collectAsState(initial = emptyList())
     val companies by db.companyDao().getAllCompanies().collectAsState(initial = emptyList())
 
-    // নোটিফিকেশন ফিল্টার লজিক (কোম্পানি, ইউনিট এবং রোল অনুযায়ী)
-    val filteredNotifications = allNotifications.filter { notif ->
-        val userCompanyId = loggedInWorker?.companyId ?: 1 // অ্যাডমিনের ডিফল্ট ১, কিন্তু অ্যাডমিন সব দেখবে
-        
-        // কোম্পানি ম্যাচিং
-        val companyMatch = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
-            true // অ্যাডমিন সব কোম্পানির নোটিশ দেখবে
-        } else {
-            notif.companyId == userCompanyId || notif.companyId == 0 // নির্দিষ্ট কোম্পানি বা "সব কোম্পানি" (0)
-        }
+    // বর্তমান সময়ের চেয়ে যেগুলোর মেয়াদ বেশি, শুধু সেগুলোই দেখাবে
+    val currentTime = System.currentTimeMillis()
+    val validNotifications = allNotifications.filter { it.expiryTimestamp == 0L || it.expiryTimestamp > currentTime }
 
+    val filteredNotifications = validNotifications.filter { notif ->
+        val userCompanyId = loggedInWorker?.companyId ?: 1
+        val companyMatch = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") true else (notif.companyId == userCompanyId || notif.companyId == 0)
         val unitMatch = notif.targetUnit == "ALL UNIT" || notif.targetUnit == loggedInWorker?.unit
         val roleMatch = notif.targetRole == "ALL" || notif.targetRole == currentUserRole
-        
         companyMatch && unitMatch && roleMatch
     }
 
-    // নোটিশ তৈরির ডায়ালগ স্টেট
+    // ডায়ালগ স্টেট
     var showCreateDialog by remember { mutableStateOf(false) }
+    var editingNotification by remember { mutableStateOf<Notification?>(null) } // এডিট করার জন্য
+    
     var noticeTitle by remember { mutableStateOf("") }
     var noticeMessage by remember { mutableStateOf("") }
     var isPinned by remember { mutableStateOf(false) }
-    
-    // টার্গেট অপশন স্টেট
-    var targetCompanyId by remember { mutableStateOf<Int?>(null) } // অ্যাডমিনের জন্য
     var targetUnit by remember { mutableStateOf("ALL UNIT") }
     var targetRole by remember { mutableStateOf("ALL") }
-    var expandedCompany by remember { mutableStateOf(false) }
+    var targetCompanyId by remember { mutableStateOf(0) }
+    var durationStr by remember { mutableStateOf("Permanent") }
+
     var expandedUnit by remember { mutableStateOf(false) }
     var expandedRole by remember { mutableStateOf(false) }
+    var expandedCompany by remember { mutableStateOf(false) }
+    var expandedDuration by remember { mutableStateOf(false) }
+
+    val durations = listOf("1 Hour", "24 Hours", "7 Days", "Permanent")
+
+    fun resetForm() {
+        noticeTitle = ""
+        noticeMessage = ""
+        isPinned = false
+        targetUnit = "ALL UNIT"
+        targetRole = "ALL"
+        targetCompanyId = 0
+        durationStr = "Permanent"
+        editingNotification = null
+    }
 
     Scaffold(
         topBar = {
@@ -88,13 +96,9 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
             )
         },
         floatingActionButton = {
-            // শুধুমাত্র অ্যাডমিন, অফিসার এবং ম্যানেজমেন্ট নোটিশ তৈরি করতে পারবে
             if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || currentUserRole == "Officer" || currentUserRole == "Management") {
                 FloatingActionButton(
-                    onClick = { 
-                        targetCompanyId = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") 0 else loggedInWorker?.companyId
-                        showCreateDialog = true 
-                    },
+                    onClick = { resetForm(); showCreateDialog = true },
                     containerColor = Navy,
                     contentColor = Color.White
                 ) {
@@ -118,6 +122,8 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredNotifications) { notification ->
+                    var showMenu by remember { mutableStateOf(false) }
+                    
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = if (notification.isPinned) Color(0xFFFFF8E1) else Color.White
@@ -133,14 +139,56 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = notification.title,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Navy,
-                                    fontSize = 16.sp
-                                )
-                                if (notification.isPinned) {
-                                    Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = Gold, modifier = Modifier.size(20.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = notification.title,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Navy,
+                                        fontSize = 16.sp
+                                    )
+                                    if (notification.isPinned) {
+                                        Spacer(Modifier.width(4.dp))
+                                        Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = Gold, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                                
+                                // এডিট এবং ডিলিট মেনু (শুধুমাত্র নোটিশ দাতা এবং অ্যাডমিন দেখবে)
+                                if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || notification.senderName == loggedInWorker?.fullName) {
+                                    Box {
+                                        IconButton(onClick = { showMenu = true }) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = TextSecondary)
+                                        }
+                                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                            DropdownMenuItem(
+                                                text = { Text("Edit") },
+                                                leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                                onClick = {
+                                                    editingNotification = notification
+                                                    noticeTitle = notification.title
+                                                    noticeMessage = notification.message
+                                                    isPinned = notification.isPinned
+                                                    targetUnit = notification.targetUnit
+                                                    targetRole = notification.targetRole
+                                                    targetCompanyId = notification.companyId
+                                                    // মেয়াদ হিসাব করা (সহজ রাখার জন্য আপাতত Permanent সেট হবে)
+                                                    durationStr = "Permanent" 
+                                                    showCreateDialog = true
+                                                    showMenu = false
+                                                }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Delete", color = Color.Red) },
+                                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
+                                                onClick = {
+                                                    scope.launch {
+                                                        db.notificationDao().deleteNotificationById(notification.id)
+                                                        Toast.makeText(context, "ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                    showMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
@@ -150,21 +198,23 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                             
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
                             ) {
-                                if (notification.isPinned) {
+                                Column {
                                     Text(
-                                        text = "Pinned by: ${notification.senderName} (${notification.senderDesignation})",
+                                        text = if (notification.isPinned) "Pinned by: ${notification.senderName}" else "By: ${notification.senderName} | ${notification.targetUnit} | ${notification.targetRole}",
                                         fontSize = 11.sp,
-                                        color = Gold,
-                                        fontWeight = FontWeight.SemiBold
+                                        color = if (notification.isPinned) Gold else TextSecondary,
+                                        fontWeight = if (notification.isPinned) FontWeight.Bold else FontWeight.Normal
                                     )
-                                } else {
-                                    Text(
-                                        text = "By: ${notification.senderName} | ${notification.targetUnit} | ${notification.targetRole}",
-                                        fontSize = 11.sp,
-                                        color = TextSecondary
-                                    )
+                                    // মেয়াদ দেখানো
+                                    if (notification.expiryTimestamp > 0) {
+                                        val expiryDate = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(notification.expiryTimestamp))
+                                        Text(text = "Expires: $expiryDate", fontSize = 10.sp, color = Color.Red)
+                                    } else {
+                                        Text(text = "Permanent Notice", fontSize = 10.sp, color = Color.Gray)
+                                    }
                                 }
                                 val date = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(notification.timestamp))
                                 Text(text = date, fontSize = 11.sp, color = TextSecondary)
@@ -176,11 +226,10 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
         }
     }
 
-    // নোটিশ তৈরির ডায়ালগ
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Create New Notice", color = Navy, fontWeight = FontWeight.Bold) },
+            title = { Text(if (editingNotification != null) "Edit Notice" else "Create New Notice", color = Navy, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     OutlinedTextField(
@@ -198,7 +247,7 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         maxLines = 3
                     )
 
-                    // শুধুমাত্র অ্যাডমিন কোম্পানি সিলেক্ট করতে পারবে
+                    // অ্যাডমিন হলে কোম্পানি সিলেক্ট করবে
                     if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
                         Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             val currentCompanyName = if (targetCompanyId == 0) "ALL COMPANIES" else companies.find { it.companyId == targetCompanyId }?.companyName ?: "Select Company"
@@ -216,7 +265,7 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         }
                     }
                     
-                    // Target Unit Dropdown
+                    // ইউনিট সিলেক্ট
                     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         OutlinedTextField(
                             value = targetUnit, onValueChange = {}, readOnly = true, label = { Text("Target Unit") },
@@ -230,7 +279,7 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         }
                     }
 
-                    // Target Role Dropdown
+                    // রোল সিলেক্ট
                     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         OutlinedTextField(
                             value = targetRole, onValueChange = {}, readOnly = true, label = { Text("Target Role") },
@@ -240,6 +289,20 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         DropdownMenu(expanded = expandedRole, onDismissRequest = { expandedRole = false }) {
                             listOf("ALL", "Worker", "Officer", "Management").forEach { r ->
                                 DropdownMenuItem(text = { Text(r) }, onClick = { targetRole = r; expandedRole = false })
+                            }
+                        }
+                    }
+                    
+                    // মেয়াদ বা Duration সিলেক্ট
+                    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        OutlinedTextField(
+                            value = durationStr, onValueChange = {}, readOnly = true, label = { Text("Notice Validity") },
+                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { expandedDuration = true })
+                        DropdownMenu(expanded = expandedDuration, onDismissRequest = { expandedDuration = false }) {
+                            durations.forEach { d ->
+                                DropdownMenuItem(text = { Text(d) }, onClick = { durationStr = d; expandedDuration = false })
                             }
                         }
                     }
@@ -255,32 +318,34 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                     onClick = {
                         if (noticeTitle.isNotBlank() && noticeMessage.isNotBlank()) {
                             scope.launch {
-                                // অ্যাডমিন হলে সিলেক্ট করা কোম্পানি, না হলে নিজের কোম্পানি
-                                val finalCompanyId = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
-                                    targetCompanyId ?: 0
-                                } else {
-                                    loggedInWorker?.companyId ?: 1
+                                val finalCompanyId = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") targetCompanyId else (loggedInWorker?.companyId ?: 1)
+                                
+                                // মেয়াদ হিসাব
+                                val expiryTime = when(durationStr) {
+                                    "1 Hour" -> System.currentTimeMillis() + 3600000L
+                                    "24 Hours" -> System.currentTimeMillis() + 86400000L
+                                    "7 Days" -> System.currentTimeMillis() + 604800000L
+                                    else -> 0L // Permanent
                                 }
 
-                                db.notificationDao().insertNotification(
-                                    Notification(
-                                        companyId = finalCompanyId,
-                                        targetUnit = targetUnit,
-                                        targetRole = targetRole,
-                                        title = noticeTitle.trim(),
-                                        message = noticeMessage.trim(),
-                                        isPinned = isPinned,
-                                        senderName = loggedInWorker?.fullName ?: "Admin",
-                                        senderDesignation = loggedInWorker?.designation ?: "System Admin"
-                                    )
+                                val notif = Notification(
+                                    id = editingNotification?.id ?: 0,
+                                    companyId = finalCompanyId,
+                                    targetUnit = targetUnit,
+                                    targetRole = targetRole,
+                                    title = noticeTitle.trim(),
+                                    message = noticeMessage.trim(),
+                                    isPinned = isPinned,
+                                    senderName = editingNotification?.senderName ?: (loggedInWorker?.fullName ?: "Admin"),
+                                    senderDesignation = editingNotification?.senderDesignation ?: (loggedInWorker?.designation ?: "System Admin"),
+                                    timestamp = editingNotification?.timestamp ?: System.currentTimeMillis(),
+                                    expiryTimestamp = expiryTime
                                 )
-                                Toast.makeText(context, "নোটিশ পাঠানো হয়েছে!", Toast.LENGTH_SHORT).show()
+
+                                db.notificationDao().insertNotification(notif)
+                                Toast.makeText(context, "সফলভাবে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
                                 showCreateDialog = false
-                                noticeTitle = ""
-                                noticeMessage = ""
-                                isPinned = false
-                                targetUnit = "ALL UNIT"
-                                targetRole = "ALL"
+                                resetForm()
                             }
                         } else {
                             Toast.makeText(context, "টাইটেল এবং বিবরণ দিন!", Toast.LENGTH_SHORT).show()
@@ -288,11 +353,11 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Navy)
                 ) {
-                    Text("Send Notice")
+                    Text("Save Notice")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
+                TextButton(onClick = { showCreateDialog = false; resetForm() }) {
                     Text("Cancel", color = TextSecondary)
                 }
             }
