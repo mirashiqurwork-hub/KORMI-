@@ -33,7 +33,7 @@ fun BreakdownScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize().padding(padding),
             contentAlignment = Alignment.Center
         ) {
-            Text("খালি পেজ কাজ করছে!", fontSize = 20.sp)
+            Text("অ্যাপ ক্র্যাশ করছে না, এটি খালি পেজ!", fontSize = 20.sp)
         }
     }
 }
