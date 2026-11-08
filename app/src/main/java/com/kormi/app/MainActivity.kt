@@ -90,8 +90,10 @@ class MainActivity : ComponentActivity() {
                             ChatDetailScreen(navController, senderId, receiverId)
                         }
                         
-                        // নোটিফিকেশন স্ক্রিন আপডেট করা হলো
-                        composable("notifications") { NotificationsScreen(navController) }
+                        // এখানে loggedInWorker এবং currentUserRole পাঠানো হলো
+                        composable("notifications") { 
+                            NotificationsScreen(navController, loggedInWorker, currentUserRole) 
+                        }
                         
                         composable("location") { LocationScreen(navController) }
                     }
