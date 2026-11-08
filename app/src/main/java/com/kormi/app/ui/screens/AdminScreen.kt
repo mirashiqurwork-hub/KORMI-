@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,13 +37,25 @@ fun AdminScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF2F4F7))
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            AdminMenuCard(
+                title = "Access Control",
+                description = "Manage who sees which module",
+                icon = Icons.Default.Security
+            ) {
+                navController.navigate("access_control")
+            }
+
+            AdminMenuCard(
+                title = "Add Company",
+                description = "Register a new company",
+                icon = Icons.Default.AddBusiness
+            ) {
+                navController.navigate("add_company")
+            }
+
             AdminMenuCard(
                 title = "Manage Passwords",
                 description = "Change worker login passwords",
@@ -72,14 +83,8 @@ fun AdminMenuCard(title: String, description: String, icon: ImageVector, onClick
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(48.dp).background(Navy.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(48.dp).background(Navy.copy(alpha = 0.1f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
                 Icon(icon, contentDescription = title, tint = Navy)
             }
             Spacer(Modifier.width(16.dp))
