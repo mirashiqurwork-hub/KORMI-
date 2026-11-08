@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -34,7 +36,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
+fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, currentUserRole: String = "Worker") {
     if (worker == null) return
     
     val context = LocalContext.current
@@ -54,7 +56,14 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Profile", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text("Profile", color = Color.White, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    if (currentUserRole != "Worker") {
+                        IconButton(onClick = { mainNavController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    }
+                },
                 actions = {
                     Box {
                         IconButton(onClick = { expanded = true }) {
@@ -86,6 +95,20 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
             Spacer(Modifier.height(16.dp))
             Text(text = worker.fullName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
             Text(text = "Card: ${worker.workerId}", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
+            
+            if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || currentUserRole == "Management" || currentUserRole == "Officer") {
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = { mainNavController.navigate("edit_worker/${worker.workerId}") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Navy),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Edit Information")
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
 
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -98,6 +121,7 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?) {
                     ProfileRow("Shift", worker.shift ?: "N/A")
                     ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
                     ProfileRow("Status", worker.status)
+                    ProfileRow("Salary", "${worker.salary} Tk")
                     ProfileRow("Address", worker.presentAddress ?: "N/A")
                 }
             }
