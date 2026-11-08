@@ -50,7 +50,8 @@ class MainActivity : ComponentActivity() {
                             DashboardScreen(
                                 navController = navController, 
                                 role = currentUserRole, 
-                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User")
+                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
+                                userId = currentUserId
                             ) 
                         }
                         
@@ -60,10 +61,14 @@ class MainActivity : ComponentActivity() {
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
                             LaunchedEffect(workerId) { selectedWorker = db.workerDao().getWorkerByCard(workerId) }
-                            WorkerProfileScreen(navController, selectedWorker)
+                            WorkerProfileScreen(navController, selectedWorker, currentUserRole)
                         }
                         
-                        // এখানে loggedInWorker এবং currentUserRole পাঠানো হলো
+                        composable("edit_worker/{workerId}") { backStackEntry ->
+                            val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
+                            EditWorkerScreen(navController, workerId)
+                        }
+                        
                         composable("workers") { WorkersScreen(navController, loggedInWorker, currentUserRole) }
                         composable("add_worker") { AddWorkerScreen(navController) }
                         
@@ -73,7 +78,9 @@ class MainActivity : ComponentActivity() {
                         composable("production_calculator") { ProductionCalculatorScreen(navController) }
                         composable("breakdown") { BreakdownScreen(navController) }
                         composable("admin") { AdminScreen(navController) }
-                        composable("admin_passwords") { ManagePasswordsScreen(navController) }
+                        
+                        composable("admin_passwords") { ManagePasswordsScreen(navController, loggedInWorker) }
+                        
                         composable("add_company") { AddCompanyScreen(navController) }
                         
                         composable("messages") { MessagesScreen(navController, currentUserId) }
