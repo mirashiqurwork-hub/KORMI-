@@ -33,12 +33,28 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AttendanceScreen(navController: NavController) {
+fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    val workers by db.workerDao().getAllActiveWorkers().collectAsState(initial = emptyList())
+    val allWorkers by db.workerDao().getAllActiveWorkers().collectAsState(initial = emptyList())
+    
+    // রোল অনুযায়ী কর্মী ফিল্টার
+    val filteredWorkers = remember(allWorkers, loggedInWorker) {
+        if (loggedInWorker == null || loggedInWorker.role == "Admin") {
+            allWorkers // অ্যাডমিন সব দেখবে
+        } else if (loggedInWorker.role == "Management") {
+            allWorkers.filter { it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT" }
+        } else {
+            // অফিসার বা সুপারভাইজার শুধু তার সেকশন ও শিফট দেখবে
+            allWorkers.filter { 
+                (it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT") &&
+                (it.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION") &&
+                (it.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT")
+            }
+        }
+    }
     
     val calendar = Calendar.getInstance()
     var selectedDateStr by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)) }
@@ -46,15 +62,15 @@ fun AttendanceScreen(navController: NavController) {
     var attendanceState by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isSaved by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedDateStr, workers) {
-        if (workers.isNotEmpty()) {
+    LaunchedEffect(selectedDateStr, filteredWorkers) {
+        if (filteredWorkers.isNotEmpty()) {
             val existingList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
             val existingMap = existingList.associate { it.workerId to it.status }
             
             val newMap = mutableMapOf<String, String>()
             val dayOfWeek = getDayOfWeek(selectedDateStr)
             
-            workers.forEach { worker ->
+            filteredWorkers.forEach { worker ->
                 if (existingMap.containsKey(worker.workerId)) {
                     newMap[worker.workerId] = existingMap[worker.workerId]!!
                 } else {
@@ -112,16 +128,16 @@ fun AttendanceScreen(navController: NavController) {
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                if (isSaved) { Text(text = "Saved Successfully!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
+                if (isSaved) { Text(text = "Saved!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
             }
 
-            if (workers.isEmpty()) {
+            if (filteredWorkers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No Active Workers Found.", color = TextSecondary)
+                    Text("আপনার সেকশনে কোনো কর্মী পাওয়া যায়নি।", color = TextSecondary)
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(workers) { worker ->
+                    items(filteredWorkers) { worker ->
                         val currentStatus = attendanceState[worker.workerId] ?: "Present"
                         AttendanceRow(worker = worker, status = currentStatus, onStatusChange = { newStatus ->
                             attendanceState = attendanceState.toMutableMap().apply { this[worker.workerId] = newStatus }
@@ -145,7 +161,7 @@ fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Un
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(worker.fullName, fontWeight = FontWeight.Bold, color = Navy)
-                    Text("Card: ${worker.workerId} | Off: ${worker.weeklyOffDay ?: "N/A"}", fontSize = 11.sp, color = TextSecondary)
+                    Text("Card: ${worker.workerId} | Sec: ${worker.section ?: "N/A"}", fontSize = 11.sp, color = TextSecondary)
                 }
             }
             Spacer(Modifier.height(8.dp))
