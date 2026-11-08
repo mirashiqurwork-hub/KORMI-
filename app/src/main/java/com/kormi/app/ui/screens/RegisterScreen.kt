@@ -17,6 +17,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -44,7 +48,6 @@ fun RegisterScreen(navController: NavController) {
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    // ফর্ম স্টেটসমূহ
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     var cardNumber by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
@@ -52,6 +55,7 @@ fun RegisterScreen(navController: NavController) {
     var dob by remember { mutableStateOf("") }
     var salary by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var address by remember { mutableStateOf("") }
     
     var selectedRole by remember { mutableStateOf("Worker") }
@@ -65,7 +69,6 @@ fun RegisterScreen(navController: NavController) {
 
     var companies by remember { mutableStateOf<List<Company>>(emptyList()) }
 
-    // ডাটাবেস থেকে কোম্পানি লোড করা
     LaunchedEffect(Unit) {
         scope.launch {
             val existingCompanies = db.companyDao().getAllCompanies()
@@ -103,15 +106,9 @@ fun RegisterScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF2F4F7))
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ছবি আপলোড
             Box(
                 modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
@@ -124,12 +121,10 @@ fun RegisterScreen(navController: NavController) {
             }
             Text("Upload Photo (Mandatory)", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
 
-            // সাধারণ টেক্সট ফিল্ড
             RegTextField("Card Number / Email *", cardNumber) { cardNumber = it }
             RegTextField("Full Name *", fullName) { fullName = it }
             RegTextField("NID / Birth Cert No", nid) { nid = it }
             
-            // জন্ম তারিখ
             OutlinedTextField(
                 value = dob, onValueChange = { }, label = { Text("Date of Birth") }, readOnly = true,
                 trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Default.DateRange, null) } },
@@ -138,26 +133,35 @@ fun RegisterScreen(navController: NavController) {
             )
 
             RegTextField("Salary (Tk)", salary) { salary = it }
-            RegTextField("Password *", password) { password = it }
+            
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password *") },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = "Toggle Password Visibility",
+                            tint = Navy
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+            )
 
-            // কোম্পানি ড্রপডাউন
             DropdownField("Company *", selectedCompany?.companyName ?: "Select Company", companies.map { it.companyName }) { index ->
                 selectedCompany = companies[index]
             }
 
-            // রোল ড্রপডাউন
-            DropdownField("Designation Role", selectedRole, listOf("Worker", "Officer", "Management", "Admin")) { index ->
-                selectedRole = listOf("Worker", "Officer", "Management", "Admin")[index]
-                // রোল পরিবর্তন হলে ডেজিগনেশন রিসেট
-                selectedDesignation = when(selectedRole) {
-                    "Worker" -> "L/R"
-                    "Officer" -> "Supervisor"
-                    "Management" -> "APM"
-                    else -> "Admin"
-                }
+            DropdownField("Designation Role", selectedRole, listOf("Worker", "Officer")) { index ->
+                selectedRole = listOf("Worker", "Officer")[index]
+                selectedDesignation = if (selectedRole == "Worker") "L/R" else "Supervisor"
             }
 
-            // ডাইনামিক ড্রপডাউন (রোল অনুযায়ী)
             when (selectedRole) {
                 "Worker" -> {
                     val workerTypes = listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
@@ -171,41 +175,20 @@ fun RegisterScreen(navController: NavController) {
                     DropdownField("Shift", selectedShift, listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
                     DropdownField("Section", selectedSection, listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
                 }
-                "Management" -> {
-                    val mgmtTypes = listOf("APM", "DPM", "PM", "AGM", "DGM", "GM")
-                    DropdownField("Management Type", selectedDesignation, mgmtTypes) { selectedDesignation = mgmtTypes[it] }
-                }
-                "Admin" -> {
-                    val adminTypes = listOf("Admin", "Super Admin")
-                    DropdownField("Admin Type", selectedDesignation, adminTypes) { selectedDesignation = adminTypes[it] }
-                }
             }
 
-            // ইউনিট (Management/Admin এর জন্য ALL UNIT থাকবে)
-            if (selectedRole == "Management" || selectedRole == "Admin") {
-                DropdownField("Unit", selectedUnit, listOf("ALL UNIT", "UNIT-01", "UNIT-02", "G/F", "F/F")) { selectedUnit = listOf("ALL UNIT", "UNIT-01", "UNIT-02", "G/F", "F/F")[it] }
-            } else {
-                DropdownField("Unit", selectedUnit, listOf("UNIT-01", "UNIT-02", "G/F", "F/F")) { selectedUnit = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")[it] }
-            }
-
-            // অফ-ডে (Worker এবং Officer এর জন্য)
-            if (selectedRole == "Worker" || selectedRole == "Officer") {
-                DropdownField("Weekly Off Day", selectedOffDay, listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")) { selectedOffDay = listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")[it] }
-            }
-
+            DropdownField("Unit", selectedUnit, listOf("UNIT-01", "UNIT-02", "G/F", "F/F")) { selectedUnit = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")[it] }
+            DropdownField("Weekly Off Day", selectedOffDay, listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")) { selectedOffDay = listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")[it] }
             DropdownField("Status", selectedStatus, listOf("Active", "Inactive", "Pending")) { selectedStatus = listOf("Active", "Inactive", "Pending")[it] }
 
-            // ঠিকানা (ম্যাপ বাটনসহ)
             OutlinedTextField(
                 value = address, onValueChange = { address = it }, label = { Text("Present Address") },
-                trailingIcon = { Text("📍 Map", color = Navy, modifier = Modifier.clickable { /* Map Intent */ }) },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // সেভ বাটন এবং এরর হ্যান্ডেলিং
             Button(
                 onClick = {
                     if (cardNumber.isBlank() || fullName.isBlank() || password.isBlank() || photoUri == null || selectedCompany == null) {
@@ -267,7 +250,6 @@ fun DropdownField(label: String, selectedText: String, options: List<String>, on
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
         )
-        // ট্রান্সপারেন্ট বক্স যাতে টেক্সট ফিল্ডে ক্লিক করলেই ড্রপডাউন ওপেন হয়
         Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
         
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
