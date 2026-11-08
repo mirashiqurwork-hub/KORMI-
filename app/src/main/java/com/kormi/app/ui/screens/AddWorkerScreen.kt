@@ -1,27 +1,45 @@
 package com.kormi.app.ui.screens
 
+import android.app.DatePickerDialog
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.Company
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,37 +48,54 @@ fun AddWorkerScreen(navController: NavController) {
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    var fullName by remember { mutableStateOf("") }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
     var cardNumber by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("UNIT-01") }
-    var section by remember { mutableStateOf("RING") }
-    var shift by remember { mutableStateOf("A") }
-    var offDay by remember { mutableStateOf("FRIDAY") }
+    var fullName by remember { mutableStateOf("") }
+    var nid by remember { mutableStateOf("") }
+    var dob by remember { mutableStateOf("") }
+    var salary by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var address by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("1234") }
     
-    // নতুন ফিল্ড
     var selectedRole by remember { mutableStateOf("Worker") }
-    var selectedDesignation by remember { mutableStateOf("Helper") }
+    var selectedDesignation by remember { mutableStateOf("L/R") }
+    var selectedCompany by remember { mutableStateOf<Company?>(null) }
+    var selectedShift by remember { mutableStateOf("A") }
+    var selectedSection by remember { mutableStateOf("BACKSIDE") }
+    var selectedUnit by remember { mutableStateOf("UNIT-01") }
+    var selectedOffDay by remember { mutableStateOf("FRIDAY") }
+    var selectedStatus by remember { mutableStateOf("Active") }
 
-    var expandedRole by remember { mutableStateOf(false) }
-    var expandedDesignation by remember { mutableStateOf(false) }
+    var companies by remember { mutableStateOf<List<Company>>(emptyList()) }
 
-    val roles = listOf("Worker", "Officer", "Management", "Admin")
-    
-    // রোল অনুযায়ী ডেজিগনেশন
-    val designations = when(selectedRole) {
-        "Worker" -> listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
-        "Officer" -> listOf("Supervisor", "APO", "SR APO", "PO", "SPO")
-        "Management" -> listOf("APM", "DPM", "PM", "AGM", "DGM", "GM")
-        else -> listOf("Admin", "Super Admin")
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val existingCompanies = db.companyDao().getAllCompanies()
+            existingCompanies.collect { list ->
+                if (list.isEmpty()) {
+                    db.companyDao().insertCompany(Company(companyName = "Kormi Spinning Mills", nightBillAmount = 20.0, shiftChangeDay = "FRIDAY"))
+                } else {
+                    companies = list
+                }
+            }
+        }
     }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) photoUri = uri
+    }
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth -> dob = "$dayOfMonth/${month + 1}/$year" },
+        Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add New Person", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text("Add New Account", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -72,106 +107,146 @@ fun AddWorkerScreen(navController: NavController) {
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // রোল সিলেকশন
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = selectedRole, onValueChange = {}, readOnly = true, label = { Text("Role *") },
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-                )
-                Box(modifier = Modifier.matchParentSize().clickable { expandedRole = true })
-                DropdownMenu(expanded = expandedRole, onDismissRequest = { expandedRole = false }) {
-                    roles.forEach { role -> 
-                        DropdownMenuItem(text = { Text(role) }, onClick = { 
-                            selectedRole = role
-                            selectedDesignation = when(role) {
-                                "Worker" -> "Helper"
-                                "Officer" -> "Supervisor"
-                                "Management" -> "APM"
-                                else -> "Admin"
-                            }
-                            expandedRole = false 
-                        }) 
-                    }
+            Box(
+                modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (photoUri != null) {
+                    AsyncImage(model = photoUri, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                } else {
+                    Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(50.dp))
                 }
             }
+            Text("Upload Photo", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
 
-            // ডেজিগনেশন সিলেকশন
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = selectedDesignation, onValueChange = {}, readOnly = true, label = { Text("Designation *") },
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-                )
-                Box(modifier = Modifier.matchParentSize().clickable { expandedDesignation = true })
-                DropdownMenu(expanded = expandedDesignation, onDismissRequest = { expandedDesignation = false }) {
-                    designations.forEach { desig -> 
-                        DropdownMenuItem(text = { Text(desig) }, onClick = { selectedDesignation = desig; expandedDesignation = false }) 
-                    }
-                }
-            }
-
-            WorkerTextField("Full Name *", fullName) { fullName = it }
-            WorkerTextField("Card Number / Login ID *", cardNumber) { cardNumber = it }
-            WorkerTextField("Phone Number", phone) { phone = it }
-            WorkerTextField("Unit (e.g., UNIT-01)", unit) { unit = it }
+            RegTextField("Card Number / Email *", cardNumber) { cardNumber = it }
+            RegTextField("Full Name *", fullName) { fullName = it }
+            RegTextField("NID / Birth Cert No", nid) { nid = it }
             
-            // সেকশন ও শিফট (ম্যানেজমেন্ট এবং অ্যাডমিনের ক্ষেত্রে লাগবে না, তবে সহজ রাখার জন্য রাখা হলো)
-            WorkerTextField("Section (e.g., RING)", section) { section = it }
-            WorkerTextField("Shift (e.g., A)", shift) { shift = it }
-            WorkerTextField("Weekly Off Day (e.g., FRIDAY)", offDay) { offDay = it }
-            WorkerTextField("Address", address) { address = it }
-            WorkerTextField("Password *", password) { password = it }
+            OutlinedTextField(
+                value = dob, onValueChange = { }, label = { Text("Date of Birth") }, readOnly = true,
+                trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Default.DateRange, null) } },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+            )
 
-            Spacer(Modifier.height(16.dp))
+            RegTextField("Salary (Tk)", salary) { salary = it }
+            
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password *") },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = "Toggle Password Visibility",
+                            tint = Navy
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+            )
+
+            DropdownField("Company *", selectedCompany?.companyName ?: "Select Company", companies.map { it.companyName }) { index ->
+                selectedCompany = companies[index]
+            }
+
+            DropdownField("Role *", selectedRole, listOf("Worker", "Officer", "Management", "Admin")) { index ->
+                selectedRole = listOf("Worker", "Officer", "Management", "Admin")[index]
+                selectedDesignation = when(selectedRole) {
+                    "Worker" -> "L/R"
+                    "Officer" -> "Supervisor"
+                    "Management" -> "APM"
+                    else -> "Admin"
+                }
+            }
+
+            when (selectedRole) {
+                "Worker" -> {
+                    val workerTypes = listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
+                    DropdownField("Worker Type", selectedDesignation, workerTypes) { selectedDesignation = workerTypes[it] }
+                    DropdownField("Shift", selectedShift, listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Section", selectedSection, listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
+                }
+                "Officer" -> {
+                    val officerTypes = listOf("Supervisor", "APO", "SR APO", "PO", "SPO")
+                    DropdownField("Officer Type", selectedDesignation, officerTypes) { selectedDesignation = officerTypes[it] }
+                    DropdownField("Shift", selectedShift, listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("A", "B", "C", "P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Section", selectedSection, listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
+                }
+                "Management" -> {
+                    val mgmtTypes = listOf("APM", "DPM", "PM", "AGM", "DGM", "GM")
+                    DropdownField("Management Type", selectedDesignation, mgmtTypes) { selectedDesignation = mgmtTypes[it] }
+                }
+                "Admin" -> {
+                    val adminTypes = listOf("Admin", "Super Admin")
+                    DropdownField("Admin Type", selectedDesignation, adminTypes) { selectedDesignation = adminTypes[it] }
+                }
+            }
+
+            if (selectedRole == "Management" || selectedRole == "Admin") {
+                DropdownField("Unit", selectedUnit, listOf("ALL UNIT", "UNIT-01", "UNIT-02", "G/F", "F/F")) { selectedUnit = listOf("ALL UNIT", "UNIT-01", "UNIT-02", "G/F", "F/F")[it] }
+            } else {
+                DropdownField("Unit", selectedUnit, listOf("UNIT-01", "UNIT-02", "G/F", "F/F")) { selectedUnit = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")[it] }
+            }
+
+            if (selectedRole == "Worker" || selectedRole == "Officer") {
+                DropdownField("Weekly Off Day", selectedOffDay, listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")) { selectedOffDay = listOf("FRIDAY", "SATURDAY", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY")[it] }
+            }
+
+            DropdownField("Status", selectedStatus, listOf("Active", "Inactive", "Pending")) { selectedStatus = listOf("Active", "Inactive", "Pending")[it] }
+
+            OutlinedTextField(
+                value = address, onValueChange = { address = it }, label = { Text("Present Address") },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    if (fullName.isNotBlank() && cardNumber.isNotBlank() && password.isNotBlank()) {
+                    if (cardNumber.isBlank() || fullName.isBlank() || password.isBlank() || selectedCompany == null) {
+                        Toast.makeText(context, "অনুগ্রহ করে কোম্পানি এবং প্রয়োজনীয় তথ্য পূরণ করুন!", Toast.LENGTH_LONG).show()
+                    } else {
                         scope.launch {
                             val newWorker = Worker(
-                                workerId = cardNumber,
-                                fullName = fullName,
-                                role = selectedRole, // ড্রপডাউন থেকে আসছে
-                                designation = selectedDesignation, // ড্রপডাউন থেকে আসছে
-                                companyId = 1,
-                                photo = null,
-                                phone = phone,
-                                nidBirthCert = "",
-                                dateOfBirth = "",
+                                workerId = cardNumber.trim(),
+                                fullName = fullName.trim(),
+                                role = selectedRole,
+                                designation = selectedDesignation,
+                                companyId = selectedCompany!!.companyId,
+                                photo = photoUri?.toString(),
+                                nidBirthCert = nid,
+                                dateOfBirth = dob,
                                 presentAddress = address,
-                                section = section,
-                                shift = shift,
-                                weeklyOffDay = offDay,
-                                status = "Active",
-                                unit = unit,
-                                passwordHash = password,
-                                salary = 500.0
+                                shift = selectedShift,
+                                section = selectedSection,
+                                unit = selectedUnit,
+                                weeklyOffDay = selectedOffDay,
+                                status = selectedStatus,
+                                salary = salary.toDoubleOrNull() ?: 0.0,
+                                passwordHash = password.trim()
                             )
                             db.workerDao().insertWorker(newWorker)
+                            Toast.makeText(context, "সফলভাবে একাউন্ট তৈরি হয়েছে!", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         }
-                    } else {
-                        android.widget.Toast.makeText(context, "সব তথ্য দিন", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Navy),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Save Person", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Save Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
-}
-
-@Composable
-fun WorkerTextField(label: String, value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value, onValueChange = onValueChange, label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-    )
 }
