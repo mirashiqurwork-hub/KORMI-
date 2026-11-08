@@ -61,7 +61,10 @@ fun WorkerAttendanceScreen(worker: Worker) {
         }
     }
 
-    // পরিবর্তন এখানে (dailyWage এর বদলে salary)
+    // Present Ratio (উপস্থিতির হার) হিসাব
+    val totalWorkingDays = presentCount + absentCount
+    val presentRatio = if (totalWorkingDays > 0) (presentCount.toFloat() / totalWorkingDays.toFloat() * 100).toInt() else 0
+
     val dailyWage = if (worker.salary > 0) worker.salary else 500.0
     val estimatedSalary = presentCount * dailyWage
 
@@ -69,15 +72,29 @@ fun WorkerAttendanceScreen(worker: Worker) {
         topBar = { TopAppBar(title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)) {
+            
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Estimated Salary (${SimpleDateFormat("MMMM", Locale.US).format(calendar.time)})", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                     Text("৳ ${String.format(Locale.US, "%.2f", estimatedSalary)}", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
+                    
+                    Spacer(Modifier.height(12.dp))
+                    
+                    // Present Ratio Progress Bar
+                    Text("Present Ratio: $presentRatio%", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = presentRatio / 100f,
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = Color(0xFF4CAF50),
+                        trackColor = Color.White.copy(alpha = 0.2f)
+                    )
+                    
+                    Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        Text("Present: $presentCount", color = Color.White, fontSize = 12.sp)
-                        Text("Absent: $absentCount", color = Color.White, fontSize = 12.sp)
-                        Text("Off Day: $offDayCount", color = Color.White, fontSize = 12.sp)
+                        Text("Present: $presentCount", color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Absent: $absentCount", color = Color(0xFFF44336), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Off Day: $offDayCount", color = Color(0xFFFFC107), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
