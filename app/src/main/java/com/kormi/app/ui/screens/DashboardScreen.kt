@@ -51,6 +51,17 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     var absentCount by remember { mutableStateOf("0") }
     var offDayCount by remember { mutableStateOf("0") }
 
+    // ইউজারের পারমিশন লোড করা
+    var userAllowedModules by remember { mutableStateOf("") }
+    LaunchedEffect(userId) {
+        if (userId != "ADMIN" && userId.isNotEmpty()) {
+            val worker = db.workerDao().getWorkerByCard(userId)
+            userAllowedModules = worker?.allowedModules ?: ""
+        } else {
+            userAllowedModules = "ALL" // অ্যাডমিন সব দেখবে
+        }
+    }
+
     val allItems = listOf(
         DashboardItem("Workers", Icons.Outlined.People, "workers", listOf("ADMIN", "Officer", "Management")),
         DashboardItem("Attendance", Icons.Outlined.CheckCircle, "attendance", listOf("ADMIN", "Officer", "Management")),
@@ -62,7 +73,12 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
         DashboardItem("Admin", Icons.Outlined.AdminPanelSettings, "admin", listOf("ADMIN"))
     )
     
-    val dashboardItems = allItems.filter { it.allowedRoles.contains(role) }
+    // রোল এবং ম্যানুয়াল পারমিশন—দুইটাই চেক করা হচ্ছে
+    val dashboardItems = allItems.filter { item ->
+        val roleMatch = item.allowedRoles.contains(role)
+        val permissionMatch = userAllowedModules == "ALL" || userAllowedModules.contains(item.titleEn)
+        roleMatch && permissionMatch
+    }
 
     LaunchedEffect(Unit) {
         scope.launch {
