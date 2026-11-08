@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         composable("admin") { AdminScreen(navController) }
                         
                         composable("admin_passwords") { ManagePasswordsScreen(navController, loggedInWorker) }
+                        composable("access_control") { AccessControlScreen(navController) } // নতুন রুট
                         
                         composable("add_company") { AddCompanyScreen(navController) }
                         
@@ -90,7 +91,6 @@ class MainActivity : ComponentActivity() {
                             ChatDetailScreen(navController, senderId, receiverId)
                         }
                         
-                        // এখানে loggedInWorker এবং currentUserRole পাঠানো হলো
                         composable("notifications") { 
                             NotificationsScreen(navController, loggedInWorker, currentUserRole) 
                         }
