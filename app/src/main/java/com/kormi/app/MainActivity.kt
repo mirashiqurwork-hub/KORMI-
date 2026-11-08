@@ -89,8 +89,11 @@ class MainActivity : ComponentActivity() {
                             val receiverId = backStackEntry.arguments?.getString("receiverId") ?: ""
                             ChatDetailScreen(navController, senderId, receiverId)
                         }
-                        composable("location") { LocationScreen(navController) }
+                        
+                        // নোটিফিকেশন স্ক্রিন আপডেট করা হলো
                         composable("notifications") { NotificationsScreen(navController) }
+                        
+                        composable("location") { LocationScreen(navController) }
                     }
                 }
             }
