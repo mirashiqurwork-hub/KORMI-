@@ -26,12 +26,24 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManagePasswordsScreen(navController: NavController) {
+fun ManagePasswordsScreen(navController: NavController, loggedInWorker: Worker?) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
+    val allWorkers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
+    
+    val filteredWorkers = if (loggedInWorker == null || loggedInWorker.role == "Admin") {
+        allWorkers
+    } else if (loggedInWorker.role == "Management") {
+        allWorkers.filter { it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT" }
+    } else {
+        allWorkers.filter { 
+            (it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT") &&
+            (it.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION") &&
+            (it.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT")
+        }
+    }
     
     var selectedWorker by remember { mutableStateOf<Worker?>(null) }
     var newPassword by remember { mutableStateOf("") }
@@ -55,7 +67,7 @@ fun ManagePasswordsScreen(navController: NavController) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(workers) { worker ->
+            items(filteredWorkers) { worker ->
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable {
                         selectedWorker = worker
@@ -80,7 +92,6 @@ fun ManagePasswordsScreen(navController: NavController) {
             }
         }
 
-        // পাসওয়ার্ড পরিবর্তনের ডায়ালগ
         if (showDialog && selectedWorker != null) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },
