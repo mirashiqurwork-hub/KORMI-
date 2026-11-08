@@ -3,6 +3,7 @@ package com.kormi.app.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,7 +41,7 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkersScreen(navController: NavController) {
+fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, currentUserRole: String) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
@@ -50,29 +51,51 @@ fun WorkersScreen(navController: NavController) {
     // সার্চ স্টেট
     var searchQuery by remember { mutableStateOf("") }
     
-    // সার্চ ফিল্টার লজিক (নাম, আইডি, ফোন বা ঠিকানা দিয়ে খোঁজা)
-    val filteredWorkers = allWorkers.filter { worker ->
-        worker.fullName.contains(searchQuery, ignoreCase = true) ||
-        worker.workerId.contains(searchQuery) ||
-        worker.phone.contains(searchQuery) ||
-        (worker.presentAddress?.contains(searchQuery, ignoreCase = true) == true) ||
-        (worker.section?.contains(searchQuery, ignoreCase = true) == true) ||
-        (worker.unit?.contains(searchQuery, ignoreCase = true) == true)
-    }
-
     // Pull to Refresh স্টেট
     var isRefreshing by remember { mutableStateOf(false) }
-    var syncStatus by remember { mutableStateOf("") }
 
-    // ⚠️ এখানে আপনার Apps Script এর URL টি কোটেশন চিহ্নসহ বসাবেন
     val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
+
+    // রোল অনুযায়ী কর্মী ফিল্টার এবং সার্চ ফিল্টার
+    val filteredWorkers = allWorkers.filter { worker ->
+        // ১. সার্চ কুয়েরি ম্যাচ করে কি না
+        val matchesSearch = worker.fullName.contains(searchQuery, ignoreCase = true) ||
+                worker.workerId.contains(searchQuery) ||
+                worker.phone.contains(searchQuery) ||
+                (worker.presentAddress?.contains(searchQuery, ignoreCase = true) == true) ||
+                (worker.section?.contains(searchQuery, ignoreCase = true) == true) ||
+                (worker.unit?.contains(searchQuery, ignoreCase = true) == true)
+
+        if (!matchesSearch) return@filter false
+
+        // ২. রোল অনুযায়ী অ্যাক্সেস কন্ট্রোল
+        if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
+            return@filter true // অ্যাডমিন সব দেখবে
+        }
+        
+        if (loggedInWorker == null) return@filter false
+
+        if (currentUserRole == "Management") {
+            return@filter worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
+        }
+
+        if (currentUserRole == "Officer") {
+            val unitMatch = worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
+            val sectionMatch = worker.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION"
+            val shiftMatch = worker.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT"
+            return@filter unitMatch && sectionMatch && shiftMatch
+        }
+        
+        // সাধারণ ওয়ার্কার শুধু নিজেকে দেখবে (যদি এই স্ক্রিনে আসে)
+        return@filter worker.workerId == loggedInWorker.workerId
+    }
 
     val onRefresh: () -> Unit = {
         isRefreshing = true
-        syncStatus = "Syncing..."
         scope.launch {
             val result = fetchAndSaveWorkers(appsScriptUrl, db)
-            syncStatus = result
+            // সিঙ্কের রেজাল্ট টোস্ট মেসেজ আকারে দেখানো হচ্ছে, যাতে UI নষ্ট না হয়
+            Toast.makeText(context, result, Toast.LENGTH_LONG).show()
             isRefreshing = false
         }
     }
@@ -90,12 +113,15 @@ fun WorkersScreen(navController: NavController) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("add_worker") }, 
-                containerColor = Navy, 
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Worker")
+            // অ্যাডমিন ছাড়া অন্য কেউ কর্মী যোগ করতে পারবে না
+            if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
+                FloatingActionButton(
+                    onClick = { navController.navigate("add_worker") }, 
+                    containerColor = Navy, 
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Worker")
+                }
             }
         }
     ) { padding ->
@@ -115,7 +141,7 @@ fun WorkersScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(24.dp), // গোলাকার বা ক্যাপসুল শেইপ
+                shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
@@ -136,17 +162,6 @@ fun WorkersScreen(navController: NavController) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), 
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (syncStatus.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = syncStatus, 
-                                color = Navy, 
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-                    }
-
                     if (filteredWorkers.isEmpty() && !isRefreshing) {
                         item {
                             Box(
@@ -187,12 +202,17 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                 var count = 0
                 for (i in 0 until jsonArray.length()) {
                     val obj = jsonArray.getJSONObject(i)
+                    // চেক করা হচ্ছে ডাটাবেসে আগে থেকেই আছে কি না, যাতে রোল ওভাররাইট না হয়ে যায়
+                    val existing = db.workerDao().getWorkerByCard(obj.getString("workerId"))
+                    
+                    // যদি আগে থেকে থাকে, তবে তার রোল/সেকশন ঠিক রাখবে, শুধু গুগল শিটের ডাটা আপডেট করবে
+                    // তবে এখানে সহজ রাখার জন্য নতুন ডাটাগুলো ইন্সার্ট করা হচ্ছে
                     val worker = Worker(
                         workerId = obj.getString("workerId"),
                         fullName = obj.getString("fullName"),
-                        role = "Worker",
-                        designation = "Helper",
-                        companyId = 1,
+                        role = existing?.role ?: "Worker", // যদি নতুন হয়, ডিফল্ট Worker
+                        designation = existing?.designation ?: "Helper",
+                        companyId = existing?.companyId ?: 1,
                         photo = obj.optString("photo", ""),
                         phone = obj.optString("phone", ""),
                         nidBirthCert = obj.optString("nid", ""),
@@ -203,8 +223,8 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                         weeklyOffDay = obj.optString("offDay", ""),
                         status = if (obj.optString("status") == "Active") "Active" else "Inactive",
                         unit = obj.optString("unit", ""),
-                        passwordHash = "1234",
-                        salary = 500.0
+                        passwordHash = existing?.passwordHash ?: "1234",
+                        salary = existing?.salary ?: 500.0
                     )
                     db.workerDao().insertWorker(worker)
                     count++
@@ -241,7 +261,7 @@ fun WorkerCard(worker: Worker, navController: NavController) {
                 Text(text = worker.fullName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
                 Text(text = "Card: ${worker.workerId}", fontSize = 12.sp, color = TextSecondary)
-                Text(text = "Section: ${worker.section ?: "N/A"} | Unit: ${worker.unit ?: "N/A"}", fontSize = 12.sp, color = TextSecondary)
+                Text(text = "Sec: ${worker.section ?: "N/A"} | Role: ${worker.role}", fontSize = 12.sp, color = TextSecondary)
             }
             IconButton(onClick = {
                 if (worker.phone.isNotBlank()) {
