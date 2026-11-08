@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Calculate // ক্যালকুলেটর আইকন ইমপোর্ট
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -86,6 +87,11 @@ fun ProductionScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    // ক্যালকুলেটর বাটন
+                    IconButton(onClick = { navController.navigate("production_calculator") }) {
+                        Icon(Icons.Default.Calculate, contentDescription = "Calculator", tint = Color.White)
+                    }
+                    // ডেট পিকার বাটন
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
                     }
@@ -108,6 +114,7 @@ fun ProductionScreen(navController: NavController) {
                     Text("Date: $selectedDateDisplay", fontWeight = FontWeight.Bold, color = Navy)
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Unit Dropdown
                         ExposedDropdownMenuBox(expanded = expandedUnit, onExpandedChange = { expandedUnit = it }, modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
                                 value = unit, onValueChange = {}, readOnly = true, label = { Text("Unit") },
@@ -118,6 +125,7 @@ fun ProductionScreen(navController: NavController) {
                                 units.forEach { u -> DropdownMenuItem(text = { Text(u) }, onClick = { unit = u; expandedUnit = false }) }
                             }
                         }
+                        // Shift Dropdown
                         ExposedDropdownMenuBox(expanded = expandedShift, onExpandedChange = { expandedShift = it }, modifier = Modifier.weight(1f)) {
                             OutlinedTextField(
                                 value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
@@ -176,7 +184,6 @@ fun ProductionScreen(navController: NavController) {
             Button(
                 onClick = {
                     scope.launch {
-                        // ডাটাবেসে সেভ করা (প্রতিটি মেশিনের জন্য আলাদা রেকর্ড)
                         val date = selectedDateDb
                         val u = unit
                         val s = shift
@@ -197,14 +204,12 @@ fun ProductionScreen(navController: NavController) {
                         saveMachine("R/F", rf)
                         saveMachine("L/C", lc)
 
-                        // প্যাকিং সেভ করা
                         val bBags = packBags.toIntOrNull() ?: 0
                         val bKg = packKg.toDoubleOrNull() ?: 0.0
                         if (bBags > 0 || bKg > 0.0) {
                             db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
                         }
 
-                        // সামারি তৈরি করা
                         summaryText = """
                             Unite :- $unit
                             Date:- $selectedDateDisplay
@@ -227,7 +232,7 @@ fun ProductionScreen(navController: NavController) {
             ) {
                 Text("Save & Generate Summary", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
@@ -236,12 +241,9 @@ fun ProductionScreen(navController: NavController) {
         AlertDialog(
             onDismissRequest = { showSummaryDialog = false },
             title = { Text("Production Summary", fontWeight = FontWeight.Bold, color = Navy) },
-            text = {
-                Text(text = summaryText, fontSize = 14.sp)
-            },
+            text = { Text(text = summaryText, fontSize = 14.sp) },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // শেয়ার বাটন
                     Button(
                         onClick = {
                             val sendIntent: Intent = Intent().apply {
@@ -252,20 +254,16 @@ fun ProductionScreen(navController: NavController) {
                             val shareIntent = Intent.createChooser(sendIntent, null)
                             context.startActivity(shareIntent)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)) // WhatsApp Green
-                    ) {
-                        Text("Share")
-                    }
-                    // বন্ধ বাটন
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                    ) { Text("Share") }
+                    
                     Button(
                         onClick = { 
                             showSummaryDialog = false 
-                            navController.popBackStack() // সেভ হলে ব্যাক করবে
+                            navController.popBackStack() 
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Navy)
-                    ) {
-                        Text("Done")
-                    }
+                    ) { Text("Done") }
                 }
             }
         )
