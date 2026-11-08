@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Calculate // ক্যালকুলেটর আইকন ইমপোর্ট
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,10 +23,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Production
+import com.kormi.app.data.SyncHelper
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,12 +44,10 @@ fun ProductionScreen(navController: NavController) {
     var selectedDateDb by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)) }
     var selectedDateDisplay by remember { mutableStateOf(SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(calendar.time)) }
     
-    // ফর্ম স্টেট
     var unit by remember { mutableStateOf("UNIT-01") }
     var shift by remember { mutableStateOf("A") }
     var incharge by remember { mutableStateOf("") }
     
-    // মেশিন ভ্যালু
     var cd by remember { mutableStateOf("") }
     var bd by remember { mutableStateOf("") }
     var fd by remember { mutableStateOf("") }
@@ -54,14 +55,12 @@ fun ProductionScreen(navController: NavController) {
     var rf by remember { mutableStateOf("") }
     var lc by remember { mutableStateOf("") }
     
-    // প্যাকিং ভ্যালু
     var packBags by remember { mutableStateOf("") }
     var packKg by remember { mutableStateOf("") }
 
     var expandedUnit by remember { mutableStateOf(false) }
     var expandedShift by remember { mutableStateOf(false) }
     
-    // সামারি ডায়ালগ স্টেট
     var showSummaryDialog by remember { mutableStateOf(false) }
     var summaryText by remember { mutableStateOf("") }
 
@@ -87,11 +86,9 @@ fun ProductionScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // ক্যালকুলেটর বাটন
                     IconButton(onClick = { navController.navigate("production_calculator") }) {
                         Icon(Icons.Default.Calculate, contentDescription = "Calculator", tint = Color.White)
                     }
-                    // ডেট পিকার বাটন
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
                     }
@@ -101,37 +98,21 @@ fun ProductionScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF2F4F7))
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)
         ) {
-            // হেডার ইনফো
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Date: $selectedDateDisplay", fontWeight = FontWeight.Bold, color = Navy)
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Unit Dropdown
                         ExposedDropdownMenuBox(expanded = expandedUnit, onExpandedChange = { expandedUnit = it }, modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = unit, onValueChange = {}, readOnly = true, label = { Text("Unit") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnit) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                            )
+                            OutlinedTextField(value = unit, onValueChange = {}, readOnly = true, label = { Text("Unit") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnit) }, modifier = Modifier.menuAnchor().fillMaxWidth())
                             ExposedDropdownMenu(expanded = expandedUnit, onDismissRequest = { expandedUnit = false }) {
                                 units.forEach { u -> DropdownMenuItem(text = { Text(u) }, onClick = { unit = u; expandedUnit = false }) }
                             }
                         }
-                        // Shift Dropdown
                         ExposedDropdownMenuBox(expanded = expandedShift, onExpandedChange = { expandedShift = it }, modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedShift) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                            )
+                            OutlinedTextField(value = shift, onValueChange = {}, readOnly = true, label = { Text("Shift") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedShift) }, modifier = Modifier.menuAnchor().fillMaxWidth())
                             ExposedDropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
                                 shifts.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { shift = s; expandedShift = false }) }
                             }
@@ -146,7 +127,6 @@ fun ProductionScreen(navController: NavController) {
             Text("Machine Production (Kg)", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            // মেশিন এন্ট্রি কার্ড
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -168,7 +148,6 @@ fun ProductionScreen(navController: NavController) {
             Text("Packing Section", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
-            // প্যাকিং কার্ড
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -180,7 +159,6 @@ fun ProductionScreen(navController: NavController) {
 
             Spacer(Modifier.height(24.dp))
 
-            // সেভ বাটন
             Button(
                 onClick = {
                     scope.launch {
@@ -189,11 +167,23 @@ fun ProductionScreen(navController: NavController) {
                         val s = shift
                         val inc = incharge
 
+                        // গুগল শিটে পাঠানোর জন্য JSON
+                        val syncArray = JSONArray()
+
                         fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
                                 scope.launch {
                                     db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
+                                    
+                                    val jsonObj = JSONObject()
+                                    jsonObj.put("date", date)
+                                    jsonObj.put("unit", u)
+                                    jsonObj.put("shift", s)
+                                    jsonObj.put("machineName", mName)
+                                    jsonObj.put("weightKg", kg)
+                                    jsonObj.put("inchargeName", inc)
+                                    syncArray.put(jsonObj)
                                 }
                             }
                         }
@@ -208,6 +198,20 @@ fun ProductionScreen(navController: NavController) {
                         val bKg = packKg.toDoubleOrNull() ?: 0.0
                         if (bBags > 0 || bKg > 0.0) {
                             db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
+                            
+                            val jsonObj = JSONObject()
+                            jsonObj.put("date", date)
+                            jsonObj.put("unit", u)
+                            jsonObj.put("shift", s)
+                            jsonObj.put("machineName", "PACKING")
+                            jsonObj.put("weightKg", bKg)
+                            jsonObj.put("inchargeName", inc)
+                            syncArray.put(jsonObj)
+                        }
+
+                        // গুগল শিটে ডাটা পাঠানো
+                        if (syncArray.length() > 0) {
+                            SyncHelper.postData("syncProduction", syncArray)
                         }
 
                         summaryText = """
@@ -236,7 +240,6 @@ fun ProductionScreen(navController: NavController) {
         }
     }
 
-    // সামারি ডায়ালগ
     if (showSummaryDialog) {
         AlertDialog(
             onDismissRequest = { showSummaryDialog = false },
