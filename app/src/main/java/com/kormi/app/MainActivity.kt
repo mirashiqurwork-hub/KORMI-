@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
                         composable("admin") { AdminScreen(navController) }
                         
                         composable("admin_passwords") { ManagePasswordsScreen(navController, loggedInWorker) }
-                        composable("access_control") { AccessControlScreen(navController) } // নতুন রুট
+                        composable("access_control") { AccessControlScreen(navController) }
                         
                         composable("add_company") { AddCompanyScreen(navController) }
                         
@@ -95,7 +95,10 @@ class MainActivity : ComponentActivity() {
                             NotificationsScreen(navController, loggedInWorker, currentUserRole) 
                         }
                         
-                        composable("location") { LocationScreen(navController) }
+                        // এখানে LocationScreen-এ ডাটা পাঠানো হলো
+                        composable("location") { 
+                            LocationScreen(navController, loggedInWorker, currentUserRole) 
+                        }
                     }
                 }
             }
