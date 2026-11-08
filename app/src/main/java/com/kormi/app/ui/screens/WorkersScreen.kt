@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,11 +50,13 @@ fun WorkersScreen(navController: NavController) {
     var isRefreshing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আপনার URL টি এখানে বসাবেন
+    // ⚠️ এখানে আপনার Apps Script এর URL টি কোটেশন চিহ্নসহ বসাবেন
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
     // রিফ্রেশ করার ফাংশন
     val onRefresh: () -> Unit = {
         isRefreshing = true
+        syncStatus = "Syncing..."
         scope.launch {
             val result = fetchAndSaveWorkers(appsScriptUrl, db)
             syncStatus = result
@@ -95,26 +96,33 @@ fun WorkersScreen(navController: NavController) {
                 .padding(padding)
                 .background(Color(0xFFF2F4F7))
         ) {
-            if (workers.isEmpty() && !isRefreshing) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("কোনো কর্মী পাওয়া যায়নি। উপরে টান দিয়ে রিফ্রেশ করুন।", color = TextSecondary)
+            // LazyColumn কে fillMaxSize() দেওয়া হলো, যাতে পুরো স্ক্রিন জুড়ে টান দেওয়া যায়
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp), 
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (syncStatus.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = syncStatus, 
+                            color = Navy, 
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp), 
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (syncStatus.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = syncStatus, 
-                                color = Navy, 
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
+
+                if (workers.isEmpty() && !isRefreshing) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 50.dp), 
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("কোনো কর্মী পাওয়া যায়নি। উপরে টান দিয়ে রিফ্রেশ করুন।", color = TextSecondary)
                         }
                     }
-                    
+                } else {
                     items(workers) { worker ->
                         WorkerCard(worker, navController)
                     }
