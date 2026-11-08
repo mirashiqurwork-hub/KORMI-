@@ -51,8 +51,7 @@ fun WorkersScreen(navController: NavController) {
     var isRefreshing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec
-    " // আপনার URL টি এখানে বসাবেন
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আপনার URL টি এখানে বসাবেন
 
     // রিফ্রেশ করার ফাংশন
     val onRefresh: () -> Unit = {
