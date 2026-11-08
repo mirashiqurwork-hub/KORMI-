@@ -21,14 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Attendance
-import com.kormi.app.data.Notification
-import com.kormi.app.data.Worker
+import com.kormi.app.data.*
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -116,6 +115,9 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         var absentCount = 0
                         var offDayCount = 0
 
+                        // গুগল শিটে পাঠানোর জন্য JSON তৈরি
+                        val syncArray = JSONArray()
+
                         attendanceState.forEach { (workerId, status) ->
                             db.attendanceDao().insertOrUpdate(Attendance(workerId, selectedDateStr, status))
                             when(status) {
@@ -123,17 +125,27 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                                 "Absent" -> absentCount++
                                 "Off Day" -> offDayCount++
                             }
+
+                            // JSON-এ যোগ করা
+                            val jsonObj = JSONObject()
+                            jsonObj.put("date", selectedDateStr)
+                            jsonObj.put("workerId", workerId)
+                            jsonObj.put("status", status)
+                            syncArray.put(jsonObj)
                         }
                         
-                        // নোটিফিকেশন তৈরি করা (অফিসার/ম্যানেজমেন্টের জন্য)
+                        // গুগল শিটে ডাটা পাঠানো
+                        SyncHelper.postData("syncAttendance", syncArray)
+
+                        // নোটিফিকেশন তৈরি করা
                         if (loggedInWorker != null) {
                             val notifMessage = "ইউনিট: ${loggedInWorker.unit}, শিফট: ${loggedInWorker.shift}, সেকশন: ${loggedInWorker.section}\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
                             
                             db.notificationDao().insertNotification(
                                 Notification(
-                                    companyId = loggedInWorker.companyId, // অটোমেটিক নিজের কোম্পানি
+                                    companyId = loggedInWorker.companyId,
                                     targetUnit = loggedInWorker.unit ?: "ALL UNIT",
-                                    targetRole = "Management", // এই নোটিশ ম্যানেজমেন্ট দেখবে
+                                    targetRole = "Management",
                                     title = "Attendance Submitted by ${loggedInWorker.fullName}",
                                     message = notifMessage,
                                     senderName = loggedInWorker.fullName,
@@ -144,7 +156,7 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         }
 
                         isSaved = true
-                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "সেভ হয়েছে এবং ক্লাউডে সিঙ্ক হচ্ছে!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 containerColor = Gold, contentColor = Navy
@@ -156,7 +168,7 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                if (isSaved) { Text(text = "Saved!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
+                if (isSaved) { Text(text = "Saved & Synced!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
             }
 
             if (filteredWorkers.isEmpty()) {
