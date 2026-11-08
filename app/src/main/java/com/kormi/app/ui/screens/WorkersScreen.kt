@@ -12,7 +12,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,10 +48,27 @@ fun WorkersScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     
     val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
-    var isSyncing by remember { mutableStateOf(false) }
+    
+    // Pull to Refresh স্টেট
+    var isRefreshing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
     val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আপনার URL টি এখানে বসাবেন
+
+    // রিফ্রেশ করার ফাংশন
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        scope.launch {
+            val result = fetchAndSaveWorkers(appsScriptUrl, db)
+            syncStatus = result
+            isRefreshing = false
+        }
+    }
+
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = onRefresh
+    )
 
     Scaffold(
         topBar = {
@@ -57,48 +79,63 @@ fun WorkersScreen(navController: NavController) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                actions = {
-                    if (isSyncing) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp).padding(end = 16.dp))
-                    } else {
-                        IconButton(onClick = {
-                            isSyncing = true
-                            syncStatus = "Syncing..."
-                            scope.launch {
-                                val result = fetchAndSaveWorkers(appsScriptUrl, db)
-                                isSyncing = false
-                                syncStatus = result
-                            }
-                        }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = Color.White)
-                        }
-                    }
-                },
+                // সিঙ্ক বাটন সরিয়ে দেওয়া হয়েছে
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("add_worker") }, containerColor = Navy, contentColor = Color.White) {
+            FloatingActionButton(
+                onClick = { navController.navigate("add_worker") }, 
+                containerColor = Navy, 
+                contentColor = Color.White
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Worker")
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
-            if (syncStatus.isNotEmpty()) {
-                Text(text = syncStatus, color = Navy, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-            }
-            
-            if (workers.isEmpty()) {
+        
+        // Pull to Refresh বক্স
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF2F4F7))
+                .pullRefresh(pullRefreshState)
+        ) {
+            if (workers.isEmpty() && !isRefreshing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("কোনো কর্মী পাওয়া যায়নি। রিফ্রেশ বাটনে ক্লিক করুন।", color = TextSecondary)
+                    Text("কোনো কর্মী পাওয়া যায়নি। উপরে টান দিয়ে রিফ্রেশ করুন।", color = TextSecondary)
                 }
             } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp), 
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (syncStatus.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = syncStatus, 
+                                color = Navy, 
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                    }
+                    
                     items(workers) { worker ->
                         WorkerCard(worker, navController)
                     }
                 }
             }
+
+            // উপরে টান দিলে যে লোডিং চিহ্নটি ঘুরবে
+            PullRefreshIndicator(
+                refreshing = isRefreshing,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                contentColor = Navy,
+                containerColor = Color.White
+            )
         }
     }
 }
@@ -123,9 +160,9 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                     val worker = Worker(
                         workerId = obj.getString("workerId"),
                         fullName = obj.getString("fullName"),
-                        role = "Worker", // নতুন
-                        designation = "Helper", // নতুন
-                        companyId = 1, // নতুন
+                        role = "Worker",
+                        designation = "Helper",
+                        companyId = 1,
                         photo = obj.optString("photo", ""),
                         phone = obj.optString("phone", ""),
                         nidBirthCert = obj.optString("nid", ""),
@@ -145,7 +182,7 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                 connection.disconnect()
                 "সফলভাবে $count জন কর্মীর ডাটা সিঙ্ক হয়েছে!"
             } else {
-                "সিঙ্ক ব্যর্থ হয়েছে। রেসপন্স কোড: $responseCode"
+                "সিঙ্ক ব্যর্থ হয়েছে। কোড: $responseCode"
             }
         } catch (e: Exception) {
             Log.e("SyncError", e.toString())
