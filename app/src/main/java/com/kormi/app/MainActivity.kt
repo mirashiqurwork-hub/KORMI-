@@ -65,14 +65,14 @@ class MainActivity : ComponentActivity() {
                         
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
-                        composable("attendance") { AttendanceScreen(navController) }
+                        
+                        // এখানে loggedInWorker পাঠানো হলো
+                        composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
+                        
                         composable("manpower") { ManpowerScreen(navController) }
-                        
                         composable("production") { ProductionScreen(navController) }
-                        composable("production_calculator") { ProductionCalculatorScreen(navController) } // নতুন রুট
-                        
+                        composable("production_calculator") { ProductionCalculatorScreen(navController) }
                         composable("breakdown") { BreakdownScreen(navController) }
-                        
                         composable("admin") { AdminScreen(navController) }
                         composable("admin_passwords") { ManagePasswordsScreen(navController) }
                         composable("add_company") { AddCompanyScreen(navController) }
