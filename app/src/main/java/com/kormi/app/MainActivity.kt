@@ -63,12 +63,11 @@ class MainActivity : ComponentActivity() {
                             WorkerProfileScreen(navController, selectedWorker)
                         }
                         
-                        composable("workers") { WorkersScreen(navController) }
+                        // এখানে loggedInWorker এবং currentUserRole পাঠানো হলো
+                        composable("workers") { WorkersScreen(navController, loggedInWorker, currentUserRole) }
                         composable("add_worker") { AddWorkerScreen(navController) }
                         
-                        // এখানে loggedInWorker পাঠানো হলো
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
-                        
                         composable("manpower") { ManpowerScreen(navController) }
                         composable("production") { ProductionScreen(navController) }
                         composable("production_calculator") { ProductionCalculatorScreen(navController) }
