@@ -15,10 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +51,8 @@ fun WorkersScreen(navController: NavController) {
     var isRefreshing by remember { mutableStateOf(false) }
     var syncStatus by remember { mutableStateOf("") }
 
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec" // আপনার URL টি এখানে বসাবেন
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec
+    " // আপনার URL টি এখানে বসাবেন
 
     // রিফ্রেশ করার ফাংশন
     val onRefresh: () -> Unit = {
@@ -65,11 +64,6 @@ fun WorkersScreen(navController: NavController) {
         }
     }
 
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = isRefreshing,
-        onRefresh = onRefresh
-    )
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,7 +73,6 @@ fun WorkersScreen(navController: NavController) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                // সিঙ্ক বাটন সরিয়ে দেওয়া হয়েছে
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
             )
         },
@@ -94,13 +87,14 @@ fun WorkersScreen(navController: NavController) {
         }
     ) { padding ->
         
-        // Pull to Refresh বক্স
-        Box(
+        // Material 3 এর PullToRefreshBox
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFFF2F4F7))
-                .pullRefresh(pullRefreshState)
         ) {
             if (workers.isEmpty() && !isRefreshing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -127,15 +121,6 @@ fun WorkersScreen(navController: NavController) {
                     }
                 }
             }
-
-            // উপরে টান দিলে যে লোডিং চিহ্নটি ঘুরবে
-            PullRefreshIndicator(
-                refreshing = isRefreshing,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter),
-                contentColor = Navy,
-                containerColor = Color.White
-            )
         }
     }
 }
