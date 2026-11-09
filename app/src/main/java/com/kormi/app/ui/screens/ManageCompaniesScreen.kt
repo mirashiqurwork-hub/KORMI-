@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown // ইমপোর্ট ঠিক করা হলো
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -101,7 +102,6 @@ fun ManageCompaniesScreen(navController: NavController) {
             }
         }
 
-        // এডিট ডায়ালগ
         if (showEditDialog && selectedCompany != null) {
             AlertDialog(
                 onDismissRequest = { showEditDialog = false },
@@ -115,7 +115,6 @@ fun ManageCompaniesScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                         )
                         
-                        // Shift Change Day Dropdown (সিম্পল)
                         var expandedDay by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
