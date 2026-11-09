@@ -54,7 +54,7 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     
     val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
-    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
     // ফিল্টার লজিক
     val filteredWorkers = allWorkers.filter { worker ->
