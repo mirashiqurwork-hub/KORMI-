@@ -33,10 +33,10 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Attendance
+import com.kormi.app.data.GeminiOcrHelper // ইমপোর্ট ঠিক করা হলো
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
-import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -52,7 +52,7 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     var selectedDate by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
     var selectedShift by remember { mutableStateOf("P/A") }
     var selectedSection by remember { mutableStateOf("RING") }
-    var listType by remember { mutableStateOf("Absent List") } // Absent List, Present List
+    var listType by remember { mutableStateOf("Absent List") }
 
     var expandedShift by remember { mutableStateOf(false) }
     var expandedSection by remember { mutableStateOf(false) }
@@ -62,7 +62,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     var extractedIds = remember { mutableStateListOf<String>() }
     var imageBase64 by remember { mutableStateOf("") }
 
-    // গ্যালারি
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
@@ -72,7 +71,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         }
     }
 
-    // ক্যামেরা
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap != null) {
             val outputStream = ByteArrayOutputStream()
@@ -85,7 +83,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         if (isGranted) cameraLauncher.launch(null) else Toast.makeText(context, "পারমিশন দিন!", Toast.LENGTH_SHORT).show()
     }
 
-    // ডাটা প্রসেস ও সেভ করার ফাংশন
     fun processAndSaveAttendance() {
         if (extractedIds.isEmpty()) {
             Toast.makeText(context, "আগে ছবি থেকে ডাটা এক্সট্রাক্ট করুন!", Toast.LENGTH_SHORT).show()
@@ -93,7 +90,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         }
         isProcessing = true
         scope.launch {
-            // ডাটাবেস থেকে ওই সেকশন ও শিফটের সব কর্মী আনা
             val allWorkers = db.workerDao().getAllActiveWorkersList()
             val targetWorkers = allWorkers.filter { 
                 (it.section == selectedSection || it.section == "ALL SECTION") && 
@@ -138,11 +134,9 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         Column(
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)
         ) {
-            // কনফিগারেশন
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Shift
                         Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(value = selectedShift, onValueChange = {}, readOnly = true, label = { Text("Shift") }, trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth())
                             Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
@@ -150,7 +144,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                                 listOf("P/A", "P/B", "P/C").forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { selectedShift = s; expandedShift = false }) }
                             }
                         }
-                        // Section
                         Box(modifier = Modifier.weight(1f)) {
                             OutlinedTextField(value = selectedSection, onValueChange = {}, readOnly = true, label = { Text("Section") }, trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth())
                             Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
@@ -160,7 +153,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         }
                     }
                     
-                    // List Type
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(value = listType, onValueChange = {}, readOnly = true, label = { Text("List Type") }, trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth())
                         Box(modifier = Modifier.matchParentSize().clickable { expandedType = true })
@@ -173,7 +165,6 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
 
             Spacer(Modifier.height(16.dp))
 
-            // ক্যামেরা ও গ্যালারি বাটন
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -208,14 +199,13 @@ fun OcrAttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                     onClick = {
                         isProcessing = true
                         scope.launch {
-                            // Gemini AI দিয়ে কার্ড নম্বর বের করা
                             val prompt = "Extract all Employee Card Numbers (IDs) from this image. Return a JSON array of strings containing only the IDs."
-                            val aiResponse = GeminiOcrHelper.extractRawText(imageBase64, prompt) // এখানে একটি নতুন ফাংশন ব্যবহার করা হবে
+                            val aiResponse = GeminiOcrHelper.extractRawText(imageBase64, prompt)
 
                             if (aiResponse != null) {
                                 try {
                                     val cleanJson = aiResponse.trim().removePrefix("```json").removeSuffix("```").trim()
-                                    val jsonArray = org.json.JSONArray(cleanJson)
+                                    val jsonArray = org.json.JSONArray(cleanJson) // JSONArray ঠিক করা হলো
                                     for (i in 0 until jsonArray.length()) {
                                         extractedIds.add(jsonArray.getString(i))
                                     }
