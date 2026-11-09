@@ -1,5 +1,7 @@
 package com.kormi.app.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -63,7 +66,6 @@ fun OcrScreen(navController: NavController, ocrType: String) {
     ) { bitmap ->
         if (bitmap != null) {
             isProcessing = true
-            // Bitmap থেকে ML Kit এর জন্য ইমেজ তৈরি
             val image = InputImage.fromBitmap(bitmap, 0)
             val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
@@ -76,6 +78,17 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                     Toast.makeText(context, "OCR Failed: ${e.message}", Toast.LENGTH_LONG).show()
                     isProcessing = false
                 }
+        }
+    }
+
+    // পারমিশন রিকোয়েস্ট লঞ্চার
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch(null)
+        } else {
+            Toast.makeText(context, "ক্যামেরা ব্যবহার করতে পারমিশন দিন!", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -109,13 +122,21 @@ fun OcrScreen(navController: NavController, ocrType: String) {
             )
             Spacer(Modifier.height(16.dp))
 
-            // দুটি বাটন: ক্যামেরা এবং গ্যালারি
+            // ক্যামেরা এবং গ্যালারি বাটন
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { cameraLauncher.launch(null) },
+                    onClick = {
+                        // চেক করা হচ্ছে ক্যামেরা পারমিশন আছে কি না
+                        val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                            cameraLauncher.launch(null)
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Navy),
                     shape = RoundedCornerShape(12.dp)
@@ -164,7 +185,6 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 
                 Button(
                     onClick = {
-                        // পরবর্তী ধাপে ডাটা প্রসেস করার লজিক এখানে আসবে
                         Toast.makeText(context, "পরবর্তী ধাপে ডাটা প্রসেস করা হবে", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
