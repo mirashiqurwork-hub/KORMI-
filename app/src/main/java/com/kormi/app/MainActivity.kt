@@ -55,7 +55,6 @@ class MainActivity : ComponentActivity() {
                             ) 
                         }
                         
-                        // নতুন ড্রিল-ডাউন রুট
                         composable("worker_hierarchy/{status}") { backStackEntry ->
                             val status = backStackEntry.arguments?.getString("status") ?: "Active"
                             WorkerHierarchyScreen(navController, status, loggedInWorker, currentUserRole)
@@ -98,6 +97,7 @@ class MainActivity : ComponentActivity() {
                         composable("access_control") { AccessControlScreen(navController) }
                         
                         composable("add_company") { AddCompanyScreen(navController) }
+                        composable("manage_companies") { ManageCompaniesScreen(navController) } // নতুন রুট
                         
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
