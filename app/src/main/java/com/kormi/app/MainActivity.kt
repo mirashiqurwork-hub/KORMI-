@@ -1,14 +1,20 @@
 package com.kormi.app
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -36,20 +42,27 @@ class MainActivity : ComponentActivity() {
                     var currentUserId by remember { mutableStateOf("") }
                     var currentUserRole by remember { mutableStateOf("") }
 
-                    // ⚙️ অটোমেটিক পালা পরিবর্তনের লজিক
-                    LaunchedEffect(Unit) {
-                        scope.launch {
-                            val companies = db.companyDao().getAllCompaniesSync()
-                            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                            val todayDayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date()).uppercase() // e.g., FRIDAY
+                    // নোটিফিকেশন পারমিশন রিকোয়েস্ট
+                    val permissionLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission()
+                    ) { isGranted -> }
 
-                            companies.forEach { comp ->
-                                if (comp.shiftChangeDay.equals(todayDayName, ignoreCase = true) && comp.lastRotationDate != todayDate) {
-                                    // পালা পরিবর্তন করে দাও
-                                    db.workerDao().rotateShifts(comp.companyId)
-                                    // আপডেট হয়ে গেছে বলে সেভ করে রাখো, যাতে একই দিনে বারবার না হয়
-                                    db.companyDao().insertCompany(comp.copy(lastRotationDate = todayDate))
-                                }
+                    LaunchedEffect(Unit) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+
+                        // অটোমেটিক পালা পরিবর্তনের লজিক
+                        val companies = db.companyDao().getAllCompaniesSync()
+                        val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val todayDayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date()).uppercase()
+
+                        companies.forEach { comp ->
+                            if (comp.shiftChangeDay.equals(todayDayName, ignoreCase = true) && comp.lastRotationDate != todayDate) {
+                                db.workerDao().rotateShifts(comp.companyId)
+                                db.companyDao().insertCompany(comp.copy(lastRotationDate = todayDate))
                             }
                         }
                     }
