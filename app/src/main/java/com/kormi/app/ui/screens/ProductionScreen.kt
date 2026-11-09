@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,7 +46,7 @@ fun ProductionScreen(navController: NavController) {
     var selectedDateDisplay by remember { mutableStateOf(SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(calendar.time)) }
     
     var unit by remember { mutableStateOf("UNIT-01") }
-    var shift by remember { mutableStateOf("A") }
+    var shift by remember { mutableStateOf("P/A") } // ডিফল্ট P/A
     var incharge by remember { mutableStateOf("") }
     
     var cd by remember { mutableStateOf("") }
@@ -65,7 +66,8 @@ fun ProductionScreen(navController: NavController) {
     var summaryText by remember { mutableStateOf("") }
 
     val units = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")
-    val shifts = listOf("A", "B", "C", "P/A", "P/B", "P/C")
+    // শুধুমাত্র P/A, P/B, P/C
+    val shifts = listOf("P/A", "P/B", "P/C")
 
     val datePickerDialog = DatePickerDialog(
         context, { _, year, month, dayOfMonth ->
@@ -86,6 +88,9 @@ fun ProductionScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate("production_history") }) {
+                        Icon(Icons.Default.History, contentDescription = "History", tint = Color.White)
+                    }
                     IconButton(onClick = { navController.navigate("production_calculator") }) {
                         Icon(Icons.Default.Calculate, contentDescription = "Calculator", tint = Color.White)
                     }
@@ -167,26 +172,28 @@ fun ProductionScreen(navController: NavController) {
                         val s = shift
                         val inc = incharge
 
-                        // গুগল শিটে পাঠানোর জন্য JSON
                         val syncArray = JSONArray()
 
+                        // মেশিন ডাটা সিঙ্ক
                         fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
+                                // লোকাল ডাটাবেসে সেভ
                                 scope.launch {
                                     db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
-                                    
-                                    val jsonObj = JSONObject()
-                                    jsonObj.put("date", date)
-                                    jsonObj.put("unit", u)
-                                    jsonObj.put("shift", s)
-                                    jsonObj.put("machineName", mName)
-                                    jsonObj.put("weightKg", kg)
-                                    jsonObj.put("inchargeName", inc)
-                                    syncArray.put(jsonObj)
                                 }
+                                // ক্লাউডে পাঠানোর জন্য JSON (কোরআউটিনের বাইরে)
+                                val jsonObj = JSONObject()
+                                jsonObj.put("date", date)
+                                jsonObj.put("unit", u)
+                                jsonObj.put("shift", s)
+                                jsonObj.put("machineName", mName)
+                                jsonObj.put("weightKg", kg)
+                                jsonObj.put("inchargeName", inc)
+                                syncArray.put(jsonObj)
                             }
                         }
+                        
                         saveMachine("C/D", cd)
                         saveMachine("B/D", bd)
                         saveMachine("F/D", fd)
@@ -197,7 +204,9 @@ fun ProductionScreen(navController: NavController) {
                         val bBags = packBags.toIntOrNull() ?: 0
                         val bKg = packKg.toDoubleOrNull() ?: 0.0
                         if (bBags > 0 || bKg > 0.0) {
-                            db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
+                            scope.launch {
+                                db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
+                            }
                             
                             val jsonObj = JSONObject()
                             jsonObj.put("date", date)
@@ -209,7 +218,7 @@ fun ProductionScreen(navController: NavController) {
                             syncArray.put(jsonObj)
                         }
 
-                        // গুগল শিটে ডাটা পাঠানো
+                        // গুগল শিটে ডাটা পাঠানো (এবার ডাটাগুলো ঠিকমতো যাবে)
                         if (syncArray.length() > 0) {
                             SyncHelper.postData("syncProduction", syncArray)
                         }
