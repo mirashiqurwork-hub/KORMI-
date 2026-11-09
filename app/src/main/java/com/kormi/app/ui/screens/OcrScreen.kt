@@ -9,10 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
@@ -31,19 +29,25 @@ import androidx.navigation.NavController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
-// পার্স করা ডাটার জন্য ডাটা ক্লাস
 data class ParsedData(var id: String, var name: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OcrScreen(navController: NavController, ocrType: String) {
+fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Worker?, currentUserRole: String) {
     val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val scope = rememberCoroutineScope()
+    
     var extractedText by remember { mutableStateOf("") }
     var parsedList = remember { mutableStateListOf<ParsedData>() }
     var isProcessing by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
 
     // গ্যালারি
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -158,7 +162,7 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 }
             }
 
-            if (extractedText.isNotEmpty()) {
+            if (extractedText.isNotEmpty() && parsedList.isEmpty()) {
                 Text("Raw Text:", fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
@@ -187,10 +191,8 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                             if (idMatch != null) {
                                 val id = idMatch.value
                                 var name = trimmedLine.replace(id, "").trim()
-                                // সিরিয়াল নম্বর বা বাড়তি সংখ্যা সরানো
                                 name = name.replace(Regex("""^\d+\s*"""), "").trim()
                                 
-                                // ডুপ্লিকেট চেক
                                 if (parsedList.none { it.id == id }) {
                                     parsedList.add(ParsedData(id, name))
                                 }
@@ -210,14 +212,12 @@ fun OcrScreen(navController: NavController, ocrType: String) {
 
             Spacer(Modifier.height(16.dp))
 
-            // এডিটেবল লিস্ট
             if (parsedList.isNotEmpty()) {
                 Text("Parsed Data (${parsedList.size} items) - Edit if needed:", fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(8.dp))
                 
                 LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(parsedList.size) { index ->
-                        val item = parsedList[index]
+                    itemsIndexed(parsedList) { index, item ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -229,7 +229,6 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // আইডি এডিট
                                 OutlinedTextField(
                                     value = item.id,
                                     onValueChange = { parsedList[index] = item.copy(id = it) },
@@ -238,7 +237,6 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
                                 )
-                                // নাম এডিট
                                 OutlinedTextField(
                                     value = item.name,
                                     onValueChange = { parsedList[index] = item.copy(name = it) },
@@ -255,14 +253,53 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {
-                        // পরবর্তী ধাপে ডাটাবেসে সেভ করার লজিক এখানে আসবে
-                        Toast.makeText(context, "পরবর্তী ধাপে ডাটাবেসে সেভ হবে", Toast.LENGTH_SHORT).show()
+                        if (ocrType == "Worker List") {
+                            isSaving = true
+                            scope.launch {
+                                var savedCount = 0
+                                val defaultCompanyId = loggedInWorker?.companyId ?: 1
+                                val defaultUnit = loggedInWorker?.unit ?: "UNIT-01"
+                                val defaultShift = loggedInWorker?.shift ?: "P/A"
+                                val defaultSection = loggedInWorker?.section ?: "BACKSIDE"
+
+                                parsedList.forEach { data ->
+                                    if (data.id.isNotBlank() && data.name.isNotBlank()) {
+                                        val newWorker = Worker(
+                                            workerId = data.id,
+                                            fullName = data.name,
+                                            role = "Worker",
+                                            designation = "Helper",
+                                            companyId = defaultCompanyId,
+                                            phone = "",
+                                            status = "Inactive", // ইনঅ্যাক্টিভ হিসেবে সেভ হবে
+                                            unit = defaultUnit,
+                                            shift = defaultShift,
+                                            section = defaultSection,
+                                            salary = 500.0,
+                                            passwordHash = "1234"
+                                        )
+                                        db.workerDao().insertWorker(newWorker)
+                                        savedCount++
+                                    }
+                                }
+                                Toast.makeText(context, "$savedCount জন ওয়ার্কার সফলভাবে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
+                                isSaving = false
+                                navController.popBackStack()
+                            }
+                        } else {
+                            Toast.makeText(context, "এই মডিউলের সেভ লজিক পরবর্তী ধাপে আসবে", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF388E3C)),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isSaving
                 ) {
-                    Text("Save to Database", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    if (isSaving) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Save to Database", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
