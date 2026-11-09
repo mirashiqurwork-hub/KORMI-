@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Worker::class, Company::class, Attendance::class, Message::class, Breakdown::class, Production::class, Notification::class], version = 12, exportSchema = false)
+@Database(entities = [Worker::class, Company::class, Attendance::class, Message::class, Breakdown::class, Production::class, Notification::class, Overtime::class], version = 13, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun workerDao(): WorkerDao
     abstract fun companyDao(): CompanyDao
@@ -14,6 +14,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun breakdownDao(): BreakdownDao
     abstract fun productionDao(): ProductionDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun overtimeDao(): OvertimeDao
 
     companion object {
         @Volatile
