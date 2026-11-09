@@ -109,7 +109,6 @@ class MainActivity : ComponentActivity() {
                         composable("add_worker") { AddWorkerScreen(navController) }
                         
                         composable("ocr_worker") { OcrScreen(navController, "Worker List", loggedInWorker, currentUserRole) }
-                        // নতুন রুট
                         composable("ocr_attendance") { OcrAttendanceScreen(navController, loggedInWorker) }
                         
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
@@ -118,6 +117,7 @@ class MainActivity : ComponentActivity() {
                         composable("manpower") { ManpowerScreen(navController) }
                         
                         composable("production") { ProductionScreen(navController) }
+                        composable("production_ocr") { ProductionOcrScreen(navController, loggedInWorker) }
                         composable("production_calculator") { ProductionCalculatorScreen(navController) }
                         composable("production_history") { ProductionHistoryScreen(navController) }
                         
