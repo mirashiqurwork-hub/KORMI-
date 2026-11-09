@@ -1,5 +1,6 @@
 package com.kormi.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,8 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -122,6 +127,47 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding)) {
             
+            // 🌟 ১. রিং ফ্রেমের শ্যাডো (ডান থেকে বামে বড় থেকে ছোট)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                
+                // ডান দিক থেকে শুরু করে বাম দিকে হেলে থাকা মেশিনের স্ট্রাকচার
+                val startX = w * 1.1f
+                val startY = h * 0.2f
+                val endX = -w * 0.2f
+                val endY = h * 0.6f
+                
+                val steps = 8
+                for (i in 0 until steps) {
+                    val fraction = i.toFloat() / steps
+                    val x = startX + (endX - startX) * fraction
+                    val y = startY + (endY - startY) * fraction
+                    val scale = 1f - (fraction * 0.7f) // বড় থেকে ছোট হওয়া
+                    
+                    val frameWidth = 120f * scale
+                    val frameHeight = 400f * scale
+                    
+                    // মেশিনের ফ্রেম (হালকা নীলচে-ধূসর)
+                    drawRoundRect(
+                        color = Color(0xFFE5E9F0).copy(alpha = 0.6f),
+                        topLeft = Offset(x, y),
+                        size = Size(frameWidth, frameHeight),
+                        cornerRadius = CornerRadius(20f, 20f)
+                    )
+                    
+                    // মেশিনের ভেতরের স্পিন্ডল (ছোট ছোট দাগ)
+                    for (j in 1..4) {
+                        drawCircle(
+                            color = Color(0xFFD0D7E5),
+                            radius = 10f * scale,
+                            center = Offset(x + (frameWidth * 0.2f), y + (frameHeight * (j / 5f)))
+                        )
+                    }
+                }
+            }
+
+            // 🌟 ২. নীল হেডার এবং গোল্ডেন ওয়েভ
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val path = Path().apply {
                     moveTo(0f, 180f)
@@ -140,6 +186,38 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     close()
                 }
                 drawPath(goldPath, Gold)
+            }
+
+            // 🌟 ৩. কারখানার শ্যাডো ও ধোঁয়া (নিচে)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val path = Path().apply {
+                    moveTo(0f, h)
+                    lineTo(0f, h - 80f)
+                    lineTo(w * 0.15f, h - 120f)
+                    lineTo(w * 0.15f, h - 200f)
+                    lineTo(w * 0.2f, h - 200f)
+                    lineTo(w * 0.2f, h - 150f)
+                    lineTo(w * 0.35f, h - 150f)
+                    lineTo(w * 0.45f, h - 220f)
+                    lineTo(w * 0.55f, h - 150f)
+                    lineTo(w * 0.7f, h - 150f)
+                    lineTo(w * 0.7f, h - 260f)
+                    lineTo(w * 0.75f, h - 260f)
+                    lineTo(w * 0.75f, h - 130f)
+                    lineTo(w * 0.9f, h - 130f)
+                    lineTo(w * 0.95f, h - 180f)
+                    lineTo(w * 1f, h - 100f)
+                    lineTo(w * 1f, h)
+                    close()
+                }
+                drawPath(path, Color(0xFFE8EDF2).copy(alpha = 0.8f))
+
+                drawCircle(Color(0xFFEDF1F5).copy(alpha = 0.8f), radius = 30f, center = Offset(w * 0.17f, h - 250f))
+                drawCircle(Color(0xFFEDF1F5).copy(alpha = 0.8f), radius = 50f, center = Offset(w * 0.21f, h - 310f))
+                drawCircle(Color(0xFFEDF1F5).copy(alpha = 0.8f), radius = 40f, center = Offset(w * 0.72f, h - 310f))
+                drawCircle(Color(0xFFEDF1F5).copy(alpha = 0.8f), radius = 60f, center = Offset(w * 0.75f, h - 370f))
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -207,11 +285,12 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     }
                 }
 
+                // Hero Card (Navy & Gold)
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Navy),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.5f)),
+                    colors = CardDefaults.cardColors(containerColor = Navy.copy(alpha = 0.95f)),
+                    border = BorderStroke(1.dp, Gold.copy(alpha = 0.5f)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -234,6 +313,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
+                // 🌟 ৪. গ্লাসমরফিজম মডিউল গ্রিড
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -276,19 +356,23 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
 
 @Composable
 private fun StatBox(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.1f)).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.15f)).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = value, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(text = label, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
     }
 }
 
+// 🌟 গ্লাসমরফিজম কার্ড ডিজাইন
 @Composable
 private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.6f) // কাঁচের মতো স্বচ্ছ
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.8f)), // কাঁচের বর্ডার
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
