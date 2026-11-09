@@ -13,14 +13,13 @@ import java.net.URL
 
 object GeminiOcrHelper {
 
-    // আপনার দেওয়া পার্মানেন্ট API Key
-    private const val API_KEY = "AQ.Ab8RN6JUc09SScgnlfekGJZDoE-kBmmPdiPT0qouod7dVYQ-fg"
+    // আপনার দেওয়া Key
+    private const val API_KEY = "AQ.Ab8RN6KpvLcvyQgWq0WxqUBma4tsdtjIf5c0AZ99HyDJRGVXzA"
     
-    // Gemini 1.5 Flash মডেল (দ্রুত রেসপন্সের জন্য)
-    private const val MODEL = "gemini-1.5-flash"
-    private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent?key=$API_KEY"
+    // এখানে URL এর শেষে ?key= নেই, কারণ আমরা হেডারে পাঠাবো
+    private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
-    suspend fun extractWorkersFromImage(base64Image: String): List<ParsedWorker> {
+    suspend fun extractWorkersFromImage(base64Image: String): Pair<List<ParsedWorker>, String?> {
         return withContext(Dispatchers.IO) {
             val result = mutableListOf<ParsedWorker>()
             try {
@@ -28,9 +27,10 @@ object GeminiOcrHelper {
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
+                // এখানে Authorization হেডার যোগ করা হলো
+                conn.setRequestProperty("Authorization", "Bearer $API_KEY") 
                 conn.doOutput = true
 
-                // AI-কে দেওয়া নির্দেশনা (Prompt)
                 val promptText = """
                     You are an expert data entry assistant for a spinning mill.
                     Extract the worker data from this table image.
@@ -91,7 +91,6 @@ object GeminiOcrHelper {
                     }
                     reader.close()
 
-                    // রেসপন্স পার্স করা
                     val responseJson = JSONObject(response.toString())
                     val text = responseJson.getJSONArray("candidates")
                         .getJSONObject(0)
@@ -114,13 +113,16 @@ object GeminiOcrHelper {
                             )
                         )
                     }
+                    return@withContext Pair(result, null) // সফল
                 } else {
-                    Log.e("GeminiError", "HTTP Error: ${conn.responseCode} - ${conn.errorStream?.bufferedReader()?.readText()}")
+                    val errorStream = conn.errorStream?.bufferedReader()?.readText() ?: ""
+                    Log.e("GeminiError", "HTTP ${conn.responseCode}: $errorStream")
+                    return@withContext Pair(emptyList(), "Error ${conn.responseCode}: Key সঠিক নয় বা কোটা শেষ।")
                 }
             } catch (e: Exception) {
                 Log.e("GeminiError", "Exception: ${e.message}", e)
+                return@withContext Pair(emptyList(), "Exception: ${e.message}")
             }
-            result
         }
     }
 }
