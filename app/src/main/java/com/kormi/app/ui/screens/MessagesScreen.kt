@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +33,12 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
     val db = AppDatabase.getDatabase(context)
     val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
 
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredWorkers = workers.filter { 
+        it.fullName.contains(searchQuery, ignoreCase = true) || it.workerId.contains(searchQuery)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -45,25 +52,45 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // অ্যাডমিন কার্ড (যদি লগইন করা ইউজার কর্মী হয়)
-            if (currentUserId != "ADMIN") {
-                item {
-                    ChatListRow("ADMIN", "Admin (Sir)", onClick = {
-                        navController.navigate("chat_detail/$currentUserId/ADMIN")
-                    })
-                }
-            }
+        Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(padding)) {
+            
+            // সার্চ বার
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search by Name or ID...", fontSize = 14.sp) },
+                trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Navy) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFF2F4F7),
+                    unfocusedContainerColor = Color(0xFFF2F4F7),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent
+                ),
+                singleLine = true
+            )
 
-            items(workers) { worker ->
-                if (worker.workerId != currentUserId) {
-                    ChatListRow(worker.workerId, worker.fullName, onClick = {
-                        navController.navigate("chat_detail/$currentUserId/${worker.workerId}")
-                    })
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // অ্যাডমিন কার্ড (যদি লগইন করা ইউজার কর্মী হয়)
+                if (currentUserId != "ADMIN") {
+                    item {
+                        ChatListRow("ADMIN", "Admin (Sir)", onClick = {
+                            navController.navigate("chat_detail/$currentUserId/ADMIN")
+                        })
+                    }
+                }
+
+                items(filteredWorkers) { worker ->
+                    if (worker.workerId != currentUserId) {
+                        ChatListRow(worker.workerId, worker.fullName, onClick = {
+                            navController.navigate("chat_detail/$currentUserId/${worker.workerId}")
+                        })
+                    }
                 }
             }
         }
@@ -76,22 +103,22 @@ fun ChatListRow(id: String, name: String, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(45.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
+                modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Navy)
+                Icon(Icons.Default.Person, contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                Text(text = "Tap to chat", fontSize = 12.sp, color = TextSecondary)
+                Text(text = "ID: $id | Tap to chat", fontSize = 12.sp, color = TextSecondary)
             }
         }
     }
