@@ -55,6 +55,12 @@ class MainActivity : ComponentActivity() {
                             ) 
                         }
                         
+                        // নতুন ড্রিল-ডাউন রুট
+                        composable("worker_hierarchy/{status}") { backStackEntry ->
+                            val status = backStackEntry.arguments?.getString("status") ?: "Active"
+                            WorkerHierarchyScreen(navController, status, loggedInWorker, currentUserRole)
+                        }
+                        
                         composable("worker_dashboard") { WorkerDashboardScreen(navController, loggedInWorker) }
                         
                         composable("worker_details/{workerId}") { backStackEntry ->
@@ -77,7 +83,7 @@ class MainActivity : ComponentActivity() {
                         composable("ocr_production") { OcrScreen(navController, "Production", loggedInWorker, currentUserRole) }
                         
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
-                        composable("overtime_entry") { OvertimeEntryScreen(navController) } // নতুন রুট
+                        composable("overtime_entry") { OvertimeEntryScreen(navController) }
                         
                         composable("manpower") { ManpowerScreen(navController) }
                         
