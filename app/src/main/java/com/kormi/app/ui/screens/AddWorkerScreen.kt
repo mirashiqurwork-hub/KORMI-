@@ -61,7 +61,7 @@ fun AddWorkerScreen(navController: NavController) {
     var selectedRole by remember { mutableStateOf("Worker") }
     var selectedDesignation by remember { mutableStateOf("L/R") }
     var selectedCompany by remember { mutableStateOf<Company?>(null) }
-    var selectedShift by remember { mutableStateOf("A") }
+    var selectedShift by remember { mutableStateOf("P/A") }
     var selectedSection by remember { mutableStateOf("BACKSIDE") }
     var selectedUnit by remember { mutableStateOf("UNIT-01") }
     var selectedOffDay by remember { mutableStateOf("FRIDAY") }
@@ -171,13 +171,13 @@ fun AddWorkerScreen(navController: NavController) {
                 "Worker" -> {
                     val workerTypes = listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
                     DropdownField("Worker Type", selectedDesignation, workerTypes) { selectedDesignation = workerTypes[it] }
-                    DropdownField("Shift", selectedShift, listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Shift", selectedShift, listOf("P/A", "P/B", "P/C")) { selectedShift = listOf("P/A", "P/B", "P/C")[it] } // এখানে পরিবর্তন
                     DropdownField("Section", selectedSection, listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
                 }
                 "Officer" -> {
                     val officerTypes = listOf("Supervisor", "APO", "SR APO", "PO", "SPO")
                     DropdownField("Officer Type", selectedDesignation, officerTypes) { selectedDesignation = officerTypes[it] }
-                    DropdownField("Shift", selectedShift, listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Shift", selectedShift, listOf("P/A", "P/B", "P/C")) { selectedShift = listOf("P/A", "P/B", "P/C")[it] } // এখানে পরিবর্তন
                     DropdownField("Section", selectedSection, listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
                 }
                 "Management" -> {
@@ -247,6 +247,39 @@ fun AddWorkerScreen(navController: NavController) {
                 Text("Save Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun RegTextField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value, onValueChange = onValueChange, label = { Text(label) },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropdownField(label: String, selectedText: String, options: List<String>, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        OutlinedTextField(
+            value = selectedText, onValueChange = {}, label = { Text(label) }, readOnly = true,
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+        )
+        Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
+        
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEachIndexed { index, option ->
+                DropdownMenuItem(text = { Text(option) }, onClick = {
+                    onSelect(index)
+                    expanded = false
+                })
+            }
         }
     }
 }
