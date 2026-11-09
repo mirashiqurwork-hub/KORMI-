@@ -44,9 +44,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     
-    // Pull to Refresh এর জন্য Material 3 (নতুন ভার্সন)
     implementation("androidx.compose.material3:material3:1.3.0")
-    
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     
@@ -56,8 +54,11 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // Image Loading Library (Coil) - প্রোফাইল ছবির জন্য
+    // Image Loading Library (Coil)
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Google ML Kit (OCR)
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
