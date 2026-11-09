@@ -1,6 +1,7 @@
 package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
@@ -47,20 +48,17 @@ fun ManpowerScreen(navController: NavController) {
     LaunchedEffect(selectedDateStr) {
         isLoading = true
         scope.launch {
-            // টাইপ নিশ্চিত করা হলো
-            val workerList: List<Worker> = db.workerDao().getAllActiveWorkersList()
+            val workers = db.workerDao().getAllActiveWorkersList()
             val attendanceList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
-            
-            // ম্যাপ তৈরি (টাইপ এক্সপ্লিসিটলি দেওয়া হলো)
-            val attendanceMap: Map<String, String> = attendanceList.associate { it.workerId to it.status }
+            val attendanceMap = attendanceList.associate { it.workerId to it.status }
 
             var present = 0
             var absent = 0
             var offDay = 0
             val secMap = mutableMapOf<String, Int>()
 
-            workerList.forEach { worker ->
-                val status: String = attendanceMap[worker.workerId] ?: "Unmarked" 
+            workers.forEach { worker ->
+                val status = attendanceMap[worker.workerId] ?: "Unmarked" 
                 when (status) {
                     "Present" -> {
                         present++
@@ -69,9 +67,6 @@ fun ManpowerScreen(navController: NavController) {
                     }
                     "Absent" -> absent++
                     "Off Day" -> offDay++
-                    else -> {
-                        // Unmarked বা অন্য কিছু হলে কিছুই করবে না
-                    }
                 }
             }
             totalPresent = present
@@ -80,6 +75,23 @@ fun ManpowerScreen(navController: NavController) {
             sectionSummary = secMap.toList().sortedBy { it.first }.toMap()
             isLoading = false
         }
+    }
+
+    // টেক্সট সামারি তৈরি করার ফাংশন
+    fun generateSummaryText(): String {
+        val dateDisplay = selectedDateStr.replace("-", ".")
+        var text = "Manpower Summary\n"
+        text += "Date: $dateDisplay\n\n"
+        
+        sectionSummary.forEach { (section, count) ->
+            text += "$section: $count\n"
+        }
+        
+        text += "\nTotal Present: $totalPresent\n"
+        text += "Total Absent: $totalAbsent\n"
+        text += "Total Off Day: $totalOffDay\n"
+        
+        return text
     }
 
     val datePickerDialog = DatePickerDialog(
@@ -100,6 +112,19 @@ fun ManpowerScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    // শেয়ার বাটন
+                    IconButton(onClick = {
+                        val sendIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, generateSummaryText())
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, null)
+                        context.startActivity(shareIntent)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                    }
+                    // ডেট পিকার বাটন
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
                     }
