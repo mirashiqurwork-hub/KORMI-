@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,8 +41,11 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
 
     val allWorkers by db.workerDao().getAllActiveWorkers().collectAsState(initial = emptyList())
     
-    val filteredWorkers = remember(allWorkers, loggedInWorker) {
-        if (loggedInWorker == null || loggedInWorker.role == "Admin") {
+    var selectedSection by remember { mutableStateOf("ALL") }
+    val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
+
+    val filteredWorkers = remember(allWorkers, loggedInWorker, selectedSection) {
+        var list = if (loggedInWorker == null || loggedInWorker.role == "Admin") {
             allWorkers
         } else if (loggedInWorker.role == "Management") {
             allWorkers.filter { it.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT" }
@@ -52,6 +56,10 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                 (it.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT")
             }
         }
+        if (selectedSection != "ALL") {
+            list = list.filter { it.section == selectedSection }
+        }
+        list
     }
     
     val calendar = Calendar.getInstance()
@@ -81,8 +89,7 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     }
 
     val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
+        context, { _, year, month, dayOfMonth ->
             val cal = Calendar.getInstance()
             cal.set(year, month, dayOfMonth)
             selectedDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
@@ -92,20 +99,41 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Attendance", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Column {
+                TopAppBar(
+                    title = { Text("Attendance", color = Color.White, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    actions = {
+                        // OCR বাটন
+                        IconButton(onClick = { navController.navigate("ocr_attendance") }) {
+                            Icon(Icons.Default.DocumentScanner, contentDescription = "OCR", tint = Color.White)
+                        }
+                        IconButton(onClick = { datePickerDialog.show() }) {
+                            Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
+                )
+                // সেকশন ফিল্টার
+                ScrollableTabRow(
+                    selectedTabIndex = sections.indexOf(selectedSection),
+                    containerColor = Navy,
+                    contentColor = Color.White,
+                    edgePadding = 0.dp
+                ) {
+                    sections.forEach { section ->
+                        Tab(
+                            selected = selectedSection == section,
+                            onClick = { selectedSection = section },
+                            text = { Text(section, color = if(selectedSection==section) Gold else Color.White, fontSize = 12.sp) }
+                        )
                     }
-                },
-                actions = {
-                    IconButton(onClick = { datePickerDialog.show() }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
-            )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -114,8 +142,6 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         var presentCount = 0
                         var absentCount = 0
                         var offDayCount = 0
-
-                        // গুগল শিটে পাঠানোর জন্য JSON তৈরি
                         val syncArray = JSONArray()
 
                         attendanceState.forEach { (workerId, status) ->
@@ -125,8 +151,6 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                                 "Absent" -> absentCount++
                                 "Off Day" -> offDayCount++
                             }
-
-                            // JSON-এ যোগ করা
                             val jsonObj = JSONObject()
                             jsonObj.put("date", selectedDateStr)
                             jsonObj.put("workerId", workerId)
@@ -134,13 +158,10 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                             syncArray.put(jsonObj)
                         }
                         
-                        // গুগল শিটে ডাটা পাঠানো
                         SyncHelper.postData("syncAttendance", syncArray)
 
-                        // নোটিফিকেশন তৈরি করা
                         if (loggedInWorker != null) {
                             val notifMessage = "ইউনিট: ${loggedInWorker.unit}, শিফট: ${loggedInWorker.shift}, সেকশন: ${loggedInWorker.section}\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
-                            
                             db.notificationDao().insertNotification(
                                 Notification(
                                     companyId = loggedInWorker.companyId,
@@ -154,9 +175,8 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                                 )
                             )
                         }
-
                         isSaved = true
-                        android.widget.Toast.makeText(context, "সেভ হয়েছে এবং ক্লাউডে সিঙ্ক হচ্ছে!", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 containerColor = Gold, contentColor = Navy
@@ -168,7 +188,7 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                if (isSaved) { Text(text = "Saved & Synced!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
+                if (isSaved) { Text(text = "Saved!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
             }
 
             if (filteredWorkers.isEmpty()) {
