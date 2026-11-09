@@ -49,11 +49,8 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
     var parsedList = remember { mutableStateListOf<ParsedWorker>() }
     var isProcessing by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
-    
-    // ছবির Base64 (AI-তে পাঠানোর জন্য)
     var imageBase64 by remember { mutableStateOf("") }
 
-    // গ্যালারি থেকে ছবি নেওয়া
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -65,7 +62,6 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
         }
     }
 
-    // ক্যামেরা দিয়ে ছবি তোলা
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
@@ -146,22 +142,24 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
             }
 
             if (imageBase64.isNotEmpty() && parsedList.isEmpty() && !isProcessing) {
-                // AI Extraction বাটন
                 Button(
                     onClick = {
                         isProcessing = true
                         scope.launch {
-                            val aiResults = GeminiOcrHelper.extractWorkersFromImage(imageBase64)
+                            // এখানে Pair ডিস্ট্রাকচার করা হচ্ছে (ডাটা এবং এরর মেসেজ)
+                            val (aiResults, errorMessage) = GeminiOcrHelper.extractWorkersFromImage(imageBase64)
+                            
                             parsedList.clear()
                             parsedList.addAll(aiResults)
                             isProcessing = false
-                            if (parsedList.isEmpty()) {
-                                Toast.makeText(context, "কোনো ডাটা পাওয়া যায়নি! আবার চেষ্টা করুন।", Toast.LENGTH_SHORT).show()
+                            
+                            if (aiResults.isEmpty()) {
+                                Toast.makeText(context, errorMessage ?: "কোনো ডাটা পাওয়া যায়নি! আবার চেষ্টা করুন।", Toast.LENGTH_LONG).show()
                             }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E24AA)), // AI পার্পল কালার
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E24AA)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null)
@@ -215,7 +213,7 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
                                             designation = "Helper",
                                             companyId = loggedInWorker?.companyId ?: 1,
                                             phone = data.phone,
-                                            status = "Inactive", // ইনঅ্যাক্টিভ হিসেবে সেভ হবে
+                                            status = "Inactive",
                                             unit = data.unit,
                                             shift = data.shift,
                                             section = data.section,
