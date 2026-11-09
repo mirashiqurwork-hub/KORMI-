@@ -16,4 +16,7 @@ interface CompanyDao {
 
     @Query("SELECT * FROM companies WHERE companyId = :id")
     suspend fun getCompanyById(id: Int): Company?
+
+    @Query("DELETE FROM companies WHERE companyId = :id")
+    suspend fun deleteCompanyById(id: Int)
 }
