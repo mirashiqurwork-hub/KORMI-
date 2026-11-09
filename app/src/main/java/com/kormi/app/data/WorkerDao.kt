@@ -41,4 +41,17 @@ interface WorkerDao {
 
     @Query("DELETE FROM workers WHERE workerId = :workerId")
     suspend fun deleteWorker(workerId: String)
+
+    // নতুন: অটোমেটিক পালা পরিবর্তনের কুয়েরি (P/A -> P/B -> P/C -> P/A)
+    @Query("""
+        UPDATE workers 
+        SET shift = CASE 
+            WHEN shift = 'P/A' THEN 'P/B' 
+            WHEN shift = 'P/B' THEN 'P/C' 
+            WHEN shift = 'P/C' THEN 'P/A' 
+            ELSE shift 
+        END 
+        WHERE companyId = :companyId
+    """)
+    suspend fun rotateShifts(companyId: Int)
 }
