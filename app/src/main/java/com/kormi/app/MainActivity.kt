@@ -17,6 +17,8 @@ import com.kormi.app.data.Worker
 import com.kormi.app.ui.screens.*
 import com.kormi.app.ui.theme.KormiTheme
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +35,24 @@ class MainActivity : ComponentActivity() {
                     var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
                     var currentUserId by remember { mutableStateOf("") }
                     var currentUserRole by remember { mutableStateOf("") }
+
+                    // ⚙️ অটোমেটিক পালা পরিবর্তনের লজিক
+                    LaunchedEffect(Unit) {
+                        scope.launch {
+                            val companies = db.companyDao().getAllCompaniesSync()
+                            val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                            val todayDayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date()).uppercase() // e.g., FRIDAY
+
+                            companies.forEach { comp ->
+                                if (comp.shiftChangeDay.equals(todayDayName, ignoreCase = true) && comp.lastRotationDate != todayDate) {
+                                    // পালা পরিবর্তন করে দাও
+                                    db.workerDao().rotateShifts(comp.companyId)
+                                    // আপডেট হয়ে গেছে বলে সেভ করে রাখো, যাতে একই দিনে বারবার না হয়
+                                    db.companyDao().insertCompany(comp.copy(lastRotationDate = todayDate))
+                                }
+                            }
+                        }
+                    }
 
                     NavHost(navController = navController, startDestination = "login") {
                         composable("login") { 
@@ -97,7 +117,7 @@ class MainActivity : ComponentActivity() {
                         composable("access_control") { AccessControlScreen(navController) }
                         
                         composable("add_company") { AddCompanyScreen(navController) }
-                        composable("manage_companies") { ManageCompaniesScreen(navController) } // নতুন রুট
+                        composable("manage_companies") { ManageCompaniesScreen(navController) }
                         
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
