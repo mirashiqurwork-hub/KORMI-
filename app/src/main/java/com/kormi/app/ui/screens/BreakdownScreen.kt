@@ -48,7 +48,7 @@ fun BreakdownScreen(navController: NavController) {
     var expandedShift by remember { mutableStateOf(false) }
     var expandedSection by remember { mutableStateOf(false) }
 
-    val shifts = listOf("A", "B", "C", "P/A", "P/B", "P/C")
+    val shifts = listOf("P/A", "P/B", "P/C")
     val sections = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
     // ডাটাবেস থেকে ওই তারিখের ব্রেকডাউন লিস্ট
