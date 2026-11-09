@@ -72,12 +72,13 @@ class MainActivity : ComponentActivity() {
                         composable("workers") { WorkersScreen(navController, loggedInWorker, currentUserRole) }
                         composable("add_worker") { AddWorkerScreen(navController) }
                         
-                        // এখানে loggedInWorker এবং currentUserRole পাঠানো হলো
                         composable("ocr_worker") { OcrScreen(navController, "Worker List", loggedInWorker, currentUserRole) }
                         composable("ocr_attendance") { OcrScreen(navController, "Attendance", loggedInWorker, currentUserRole) }
                         composable("ocr_production") { OcrScreen(navController, "Production", loggedInWorker, currentUserRole) }
                         
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
+                        composable("overtime_entry") { OvertimeEntryScreen(navController) } // নতুন রুট
+                        
                         composable("manpower") { ManpowerScreen(navController) }
                         
                         composable("production") { ProductionScreen(navController) }
