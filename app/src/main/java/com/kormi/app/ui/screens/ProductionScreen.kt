@@ -28,7 +28,6 @@ import com.kormi.app.data.Production
 import com.kormi.app.data.SyncHelper
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
-import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -182,7 +181,8 @@ fun ProductionScreen(navController: NavController) {
 
                         val syncArray = JSONArray()
 
-                        fun saveMachine(mName: String, kgStr: String) {
+                        // suspend function ঠিক করা হলো
+                        suspend fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
                                 db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
