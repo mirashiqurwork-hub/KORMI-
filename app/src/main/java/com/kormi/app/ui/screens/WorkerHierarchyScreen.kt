@@ -38,11 +38,9 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
     val db = AppDatabase.getDatabase(context)
     val allWorkers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
 
-    // হায়ারার্কি স্টেট (ইউনিট, সেকশন)
     var selectedUnit by remember { mutableStateOf<String?>(null) }
     var selectedSection by remember { mutableStateOf<String?>(null) }
 
-    // রোল অনুযায়ী বেস ফিল্টার
     val baseWorkers = allWorkers.filter { worker ->
         val roleMatch = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") true else {
             if (loggedInWorker?.role == "Officer") {
@@ -57,7 +55,6 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
         roleMatch && worker.status.equals(status, ignoreCase = true)
     }
 
-    // লিস্ট তৈরি (ইউনিট বা সেকশন অনুযায়ী)
     val units = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")
     val sections = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
@@ -106,22 +103,19 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
                 }
             } else {
                 if (selectedUnit == null) {
-                    // ১. ইউনিট লিস্ট
                     items(units) { unit ->
                         val count = baseWorkers.count { it.unit == unit }
                         HierarchyCard(title = unit, subtitle = "$count Workers", onClick = { selectedUnit = unit })
                     }
                 } else if (selectedSection == null) {
-                    // ২. সেকশন লিস্ট
                     items(sections) { section ->
                         val count = baseWorkers.count { it.unit == selectedUnit && it.section == section }
                         HierarchyCard(title = section, subtitle = "$count Workers", onClick = { selectedSection = section })
                     }
                 } else {
-                    // ৩. ওয়ার্কার লিস্ট
                     val workersInSection = baseWorkers.filter { it.unit == selectedUnit && it.section == selectedSection }
                     items(workersInSection) { worker ->
-                        WorkerCard(worker, navController)
+                        HierarchyWorkerCard(worker, navController)
                     }
                 }
             }
@@ -150,8 +144,9 @@ fun HierarchyCard(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
+// এখানে নাম পরিবর্তন করা হলো
 @Composable
-fun WorkerCard(worker: Worker, navController: NavController) {
+fun HierarchyWorkerCard(worker: Worker, navController: NavController) {
     val context = LocalContext.current
     Card(
         onClick = { navController.navigate("worker_details/${worker.workerId}") },
