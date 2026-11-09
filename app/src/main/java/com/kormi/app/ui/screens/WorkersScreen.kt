@@ -48,15 +48,14 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     var searchQuery by remember { mutableStateOf("") }
     var isRefreshing by remember { mutableStateOf(false) }
 
-    // স্ট্যাটাস এবং সেকশন স্টেট
     var selectedStatus by remember { mutableStateOf("Active") }
     var selectedSection by remember { mutableStateOf("ALL") }
     
     val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
+    // ⚠️⚠️⚠️ এখানে আপনার Apps Script এর Web App URL টি বসান ⚠️⚠️⚠️
     val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
-    // ফিল্টার লজিক
     val filteredWorkers = allWorkers.filter { worker ->
         val matchesSearch = worker.fullName.contains(searchQuery, ignoreCase = true) ||
                 worker.workerId.contains(searchQuery) ||
@@ -101,7 +100,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
                 )
-                // Active/Inactive Tabs
                 TabRow(
                     selectedTabIndex = if (selectedStatus == "Active") 0 else 1,
                     containerColor = Navy,
@@ -123,7 +121,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
         floatingActionButton = {
             if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // OCR FAB
                     FloatingActionButton(
                         onClick = { navController.navigate("ocr_worker") },
                         containerColor = Color(0xFF388E3C),
@@ -131,7 +128,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
                     ) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "Add with OCR")
                     }
-                    // Manual Add FAB
                     FloatingActionButton(
                         onClick = { navController.navigate("add_worker") }, 
                         containerColor = Navy, 
@@ -145,7 +141,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
             
-            // সার্চ বার
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -157,7 +152,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
                 singleLine = true
             )
 
-            // সেকশন ফিল্টার (Scrollable)
             ScrollableTabRow(
                 selectedTabIndex = sections.indexOf(selectedSection),
                 containerColor = Color.White,
@@ -173,7 +167,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
                 }
             }
 
-            // লিস্ট ভিউ
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
