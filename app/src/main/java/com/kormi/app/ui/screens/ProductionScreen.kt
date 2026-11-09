@@ -46,7 +46,7 @@ fun ProductionScreen(navController: NavController) {
     var selectedDateDisplay by remember { mutableStateOf(SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(calendar.time)) }
     
     var unit by remember { mutableStateOf("UNIT-01") }
-    var shift by remember { mutableStateOf("P/A") } // ডিফল্ট P/A
+    var shift by remember { mutableStateOf("P/A") }
     var incharge by remember { mutableStateOf("") }
     
     var cd by remember { mutableStateOf("") }
@@ -66,8 +66,7 @@ fun ProductionScreen(navController: NavController) {
     var summaryText by remember { mutableStateOf("") }
 
     val units = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")
-    // শুধুমাত্র P/A, P/B, P/C
-    val shifts = listOf("P/A", "P/B", "P/C")
+    val shifts = listOf("P/A", "P/B", "P/C") // A, B, C বাদ দেওয়া হলো
 
     val datePickerDialog = DatePickerDialog(
         context, { _, year, month, dayOfMonth ->
@@ -174,15 +173,12 @@ fun ProductionScreen(navController: NavController) {
 
                         val syncArray = JSONArray()
 
-                        // মেশিন ডাটা সিঙ্ক
                         fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
-                                // লোকাল ডাটাবেসে সেভ
                                 scope.launch {
                                     db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
                                 }
-                                // ক্লাউডে পাঠানোর জন্য JSON (কোরআউটিনের বাইরে)
                                 val jsonObj = JSONObject()
                                 jsonObj.put("date", date)
                                 jsonObj.put("unit", u)
@@ -218,7 +214,6 @@ fun ProductionScreen(navController: NavController) {
                             syncArray.put(jsonObj)
                         }
 
-                        // গুগল শিটে ডাটা পাঠানো (এবার ডাটাগুলো ঠিকমতো যাবে)
                         if (syncArray.length() > 0) {
                             SyncHelper.postData("syncProduction", syncArray)
                         }
