@@ -41,6 +41,14 @@ fun AdminScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AdminMenuCard(
+                title = "Manage Companies",
+                description = "View, edit or delete companies",
+                icon = Icons.Default.Business
+            ) {
+                navController.navigate("manage_companies")
+            }
+
+            AdminMenuCard(
                 title = "Access Control",
                 description = "Manage who sees which module",
                 icon = Icons.Default.Security
