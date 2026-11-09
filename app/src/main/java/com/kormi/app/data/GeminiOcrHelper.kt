@@ -13,12 +13,10 @@ import java.net.URL
 
 object GeminiOcrHelper {
 
-    // আপনার দেওয়া নতুন Key
     private const val API_KEY = "AQ.Ab8RN6Joxu0TXLR_AtKDKtzmAZmMz_aQnIsgVuz3MzgDdoDLfw"
-    
-    // Key টি URL এর ভেতরে যুক্ত করা হলো
     private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$API_KEY"
 
+    // ১. ওয়ার্কার লিস্টের জন্য (আগের ফাংশন)
     suspend fun extractWorkersFromImage(base64Image: String): Pair<List<ParsedWorker>, String?> {
         return withContext(Dispatchers.IO) {
             val result = mutableListOf<ParsedWorker>()
@@ -111,15 +109,73 @@ object GeminiOcrHelper {
                             )
                         )
                     }
-                    return@withContext Pair(result, null) // সফল
+                    return@withContext Pair(result, null)
                 } else {
-                    val errorStream = conn.errorStream?.bufferedReader()?.readText() ?: ""
-                    Log.e("GeminiError", "HTTP ${conn.responseCode}: $errorStream")
-                    return@withContext Pair(emptyList(), "Error ${conn.responseCode}: Key সঠিক নয় বা কোটা শেষ।")
+                    return@withContext Pair(emptyList(), "Error ${conn.responseCode}")
                 }
             } catch (e: Exception) {
-                Log.e("GeminiError", "Exception: ${e.message}", e)
                 return@withContext Pair(emptyList(), "Exception: ${e.message}")
+            }
+        }
+    }
+
+    // ২. শুধু কার্ড নম্বর বা টেক্সট বের করার জন্য (Attendance ও অন্যান্য)
+    suspend fun extractRawText(base64Image: String, prompt: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL(API_URL)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+
+                val jsonPayload = JSONObject().apply {
+                    put("contents", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("parts", JSONArray().apply {
+                                put(JSONObject().put("text", prompt))
+                                put(JSONObject().apply {
+                                    put("inline_data", JSONObject().apply {
+                                        put("mime_type", "image/jpeg")
+                                        put("data", base64Image)
+                                    })
+                                })
+                            })
+                        })
+                    })
+                    put("generationConfig", JSONObject().apply {
+                        put("response_mime_type", "application/json")
+                    })
+                }
+
+                val os = OutputStreamWriter(conn.outputStream)
+                os.write(jsonPayload.toString())
+                os.flush()
+                os.close()
+
+                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+
+                    val responseJson = JSONObject(response.toString())
+                    return@withContext responseJson.getJSONArray("candidates")
+                        .getJSONObject(0)
+                        .getJSONObject("content")
+                        .getJSONArray("parts")
+                        .getJSONObject(0)
+                        .getString("text")
+                } else {
+                    Log.e("GeminiError", "HTTP ${conn.responseCode}")
+                    return@withContext null
+                }
+            } catch (e: Exception) {
+                Log.e("GeminiError", "Exception: ${e.message}")
+                return@withContext null
             }
         }
     }
