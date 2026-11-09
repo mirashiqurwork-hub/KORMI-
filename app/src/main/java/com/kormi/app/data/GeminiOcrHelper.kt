@@ -16,7 +16,7 @@ object GeminiOcrHelper {
     // আপনার দেওয়া Key
     private const val API_KEY = "AQ.Ab8RN6KpvLcvyQgWq0WxqUBma4tsdtjIf5c0AZ99HyDJRGVXzA"
     
-    // এখানে URL এর শেষে ?key= নেই, কারণ আমরা হেডারে পাঠাবো
+    // API URL
     private const val API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
     suspend fun extractWorkersFromImage(base64Image: String): Pair<List<ParsedWorker>, String?> {
@@ -27,8 +27,9 @@ object GeminiOcrHelper {
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
-                // এখানে Authorization হেডার যোগ করা হলো
-                conn.setRequestProperty("Authorization", "Bearer $API_KEY") 
+                
+                // এখানে x-goog-api-key হেডার ব্যবহার করা হলো
+                conn.setRequestProperty("x-goog-api-key", API_KEY) 
                 conn.doOutput = true
 
                 val promptText = """
