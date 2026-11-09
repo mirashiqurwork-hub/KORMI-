@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,9 +28,6 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,12 +36,35 @@ fun OcrScreen(navController: NavController, ocrType: String) {
     var extractedText by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
+    // গ্যালারি থেকে ছবি নেওয়ার লঞ্চার
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
             isProcessing = true
             val image = InputImage.fromFilePath(context, uri)
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
+            recognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    extractedText = visionText.text
+                    isProcessing = false
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(context, "OCR Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    isProcessing = false
+                }
+        }
+    }
+
+    // ক্যামেরা দিয়ে ছবি তোলার লঞ্চার
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            isProcessing = true
+            // Bitmap থেকে ML Kit এর জন্য ইমেজ তৈরি
+            val image = InputImage.fromBitmap(bitmap, 0)
             val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
             recognizer.process(image)
@@ -88,15 +109,32 @@ fun OcrScreen(navController: NavController, ocrType: String) {
             )
             Spacer(Modifier.height(16.dp))
 
-            Button(
-                onClick = { imagePickerLauncher.launch("image/*") },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF388E3C)),
-                shape = RoundedCornerShape(12.dp)
+            // দুটি বাটন: ক্যামেরা এবং গ্যালারি
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Image, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Select Image from Gallery", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = { cameraLauncher.launch(null) },
+                    modifier = Modifier.weight(1f).height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Navy),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Camera", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier.weight(1f).height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF388E3C)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Image, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Gallery", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -124,9 +162,9 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 
                 Spacer(Modifier.height(16.dp))
                 
-                // এই বাটনে ক্লিক করলে আগামী ধাপে আমরা ডাটাবেসে সেভ করার লজিক লিখব
                 Button(
                     onClick = {
+                        // পরবর্তী ধাপে ডাটা প্রসেস করার লজিক এখানে আসবে
                         Toast.makeText(context, "পরবর্তী ধাপে ডাটা প্রসেস করা হবে", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
