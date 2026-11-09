@@ -35,11 +35,10 @@ import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.GeminiOcrHelper
 import com.kormi.app.data.Production
 import com.kormi.app.data.SyncHelper
+import com.kormi.app.data.Worker // Worker ইমপোর্ট ঠিক করা হলো
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
-import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -64,7 +63,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
     var isProcessing by remember { mutableStateOf(false) }
     var imageBase64 by remember { mutableStateOf("") }
     
-    // ফর্ম ভ্যালু
     var cd by remember { mutableStateOf("") }
     var bd by remember { mutableStateOf("") }
     var fd by remember { mutableStateOf("") }
@@ -74,7 +72,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
     var packBags by remember { mutableStateOf("") }
     var packKg by remember { mutableStateOf("") }
 
-    // গ্যালারি
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
@@ -84,7 +81,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
         }
     }
 
-    // ক্যামেরা
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap != null) {
             val outputStream = ByteArrayOutputStream()
@@ -104,9 +100,10 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
             val s = selectedShift
             val inc = incharge
 
-            val syncArray = JSONArray()
+            val syncArray = org.json.JSONArray()
 
-            fun saveMachine(mName: String, kgStr: String) {
+            // suspend function ঠিক করা হলো
+            suspend fun saveMachine(mName: String, kgStr: String) {
                 val kg = kgStr.toDoubleOrNull() ?: 0.0
                 if (kg > 0.0) {
                     db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
@@ -167,7 +164,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
         Column(
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)
         ) {
-            // কনফিগারেশন
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Date: $selectedDateDisplay", fontWeight = FontWeight.Bold, color = Navy)
@@ -193,7 +189,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
 
             Spacer(Modifier.height(16.dp))
 
-            // ক্যামেরা এবং গ্যালারি বাটন
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -274,7 +269,6 @@ fun ProductionOcrScreen(navController: NavController, loggedInWorker: Worker?) {
                 }
             }
 
-            // এডিটেবল ফর্ম
             if (cd.isNotEmpty() || bd.isNotEmpty() || packBags.isNotEmpty()) {
                 Text("Extracted Data (Edit if needed):", fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(8.dp))
