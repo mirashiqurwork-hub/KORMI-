@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Notification
+import com.kormi.app.data.NotificationHelper
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
@@ -41,7 +42,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
     val allNotifications by db.notificationDao().getAllNotifications().collectAsState(initial = emptyList())
     val companies by db.companyDao().getAllCompanies().collectAsState(initial = emptyList())
 
-    // বর্তমান সময়ের চেয়ে যেগুলোর মেয়াদ বেশি, শুধু সেগুলোই দেখাবে
     val currentTime = System.currentTimeMillis()
     val validNotifications = allNotifications.filter { it.expiryTimestamp == 0L || it.expiryTimestamp > currentTime }
 
@@ -53,9 +53,8 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
         companyMatch && unitMatch && roleMatch
     }
 
-    // ডায়ালগ স্টেট
     var showCreateDialog by remember { mutableStateOf(false) }
-    var editingNotification by remember { mutableStateOf<Notification?>(null) } // এডিট করার জন্য
+    var editingNotification by remember { mutableStateOf<Notification?>(null) }
     
     var noticeTitle by remember { mutableStateOf("") }
     var noticeMessage by remember { mutableStateOf("") }
@@ -125,9 +124,7 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                     var showMenu by remember { mutableStateOf(false) }
                     
                     Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (notification.isPinned) Color(0xFFFFF8E1) else Color.White
-                        ),
+                        colors = CardDefaults.cardColors(containerColor = if (notification.isPinned) Color(0xFFFFF8E1) else Color.White),
                         shape = RoundedCornerShape(12.dp),
                         border = if (notification.isPinned) androidx.compose.foundation.BorderStroke(1.dp, Gold) else null,
                         modifier = Modifier.fillMaxWidth(),
@@ -140,19 +137,13 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = notification.title,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Navy,
-                                        fontSize = 16.sp
-                                    )
+                                    Text(notification.title, fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
                                     if (notification.isPinned) {
                                         Spacer(Modifier.width(4.dp))
                                         Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = Gold, modifier = Modifier.size(16.dp))
                                     }
                                 }
                                 
-                                // এডিট এবং ডিলিট মেনু (শুধুমাত্র নোটিশ দাতা এবং অ্যাডমিন দেখবে)
                                 if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || notification.senderName == loggedInWorker?.fullName) {
                                     Box {
                                         IconButton(onClick = { showMenu = true }) {
@@ -170,7 +161,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                                                     targetUnit = notification.targetUnit
                                                     targetRole = notification.targetRole
                                                     targetCompanyId = notification.companyId
-                                                    // মেয়াদ হিসাব করা (সহজ রাখার জন্য আপাতত Permanent সেট হবে)
                                                     durationStr = "Permanent" 
                                                     showCreateDialog = true
                                                     showMenu = false
@@ -208,7 +198,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                                         color = if (notification.isPinned) Gold else TextSecondary,
                                         fontWeight = if (notification.isPinned) FontWeight.Bold else FontWeight.Normal
                                     )
-                                    // মেয়াদ দেখানো
                                     if (notification.expiryTimestamp > 0) {
                                         val expiryDate = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(notification.expiryTimestamp))
                                         Text(text = "Expires: $expiryDate", fontSize = 10.sp, color = Color.Red)
@@ -247,7 +236,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         maxLines = 3
                     )
 
-                    // অ্যাডমিন হলে কোম্পানি সিলেক্ট করবে
                     if (currentUserRole == "Admin" || currentUserRole == "ADMIN") {
                         Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                             val currentCompanyName = if (targetCompanyId == 0) "ALL COMPANIES" else companies.find { it.companyId == targetCompanyId }?.companyName ?: "Select Company"
@@ -265,7 +253,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         }
                     }
                     
-                    // ইউনিট সিলেক্ট
                     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         OutlinedTextField(
                             value = targetUnit, onValueChange = {}, readOnly = true, label = { Text("Target Unit") },
@@ -279,7 +266,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         }
                     }
 
-                    // রোল সিলেক্ট
                     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         OutlinedTextField(
                             value = targetRole, onValueChange = {}, readOnly = true, label = { Text("Target Role") },
@@ -293,7 +279,6 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                         }
                     }
                     
-                    // মেয়াদ বা Duration সিলেক্ট
                     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         OutlinedTextField(
                             value = durationStr, onValueChange = {}, readOnly = true, label = { Text("Notice Validity") },
@@ -320,12 +305,11 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                             scope.launch {
                                 val finalCompanyId = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") targetCompanyId else (loggedInWorker?.companyId ?: 1)
                                 
-                                // মেয়াদ হিসাব
                                 val expiryTime = when(durationStr) {
                                     "1 Hour" -> System.currentTimeMillis() + 3600000L
                                     "24 Hours" -> System.currentTimeMillis() + 86400000L
                                     "7 Days" -> System.currentTimeMillis() + 604800000L
-                                    else -> 0L // Permanent
+                                    else -> 0L
                                 }
 
                                 val notif = Notification(
@@ -343,6 +327,10 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
                                 )
 
                                 db.notificationDao().insertNotification(notif)
+                                
+                                // 🌟 এখানে সিস্টেম নোটিফিকেশন কল করা হলো
+                                NotificationHelper.showNotification(context, notif.title, notif.message)
+                                
                                 Toast.makeText(context, "সফলভাবে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
                                 showCreateDialog = false
                                 resetForm()
