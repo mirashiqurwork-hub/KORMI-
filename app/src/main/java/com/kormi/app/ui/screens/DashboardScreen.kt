@@ -399,4 +399,14 @@ private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-       
+            // টেক্সটের পেছনে কোনো সাদা বক্স নেই
+            Text(
+                text = item.titleEn,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Navy,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
