@@ -7,12 +7,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp // <-- এই লাইনটি মিসিং ছিল, এখন যোগ করা হলো
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -61,6 +62,14 @@ fun WorkerDashboardScreen(mainNavController: NavController, worker: Worker?) {
                     onClick = { navController.navigate("worker_messages_tab") { popUpTo(navController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = Navy, unselectedIconColor = TextSecondary, indicatorColor = Navy.copy(alpha = 0.1f))
                 )
+                // নতুন Location ট্যাব
+                NavigationBarItem(
+                    icon = { Icon(Icons.Outlined.LocationOn, contentDescription = "Location") },
+                    label = { Text("Location", fontSize = 10.sp) },
+                    selected = currentRoute == "worker_location_tab",
+                    onClick = { navController.navigate("worker_location_tab") { popUpTo(navController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Navy, unselectedIconColor = TextSecondary, indicatorColor = Navy.copy(alpha = 0.1f))
+                )
             }
         }
     ) { padding ->
@@ -72,6 +81,7 @@ fun WorkerDashboardScreen(mainNavController: NavController, worker: Worker?) {
             composable("worker_profile_tab") { WorkerProfileScreen(mainNavController, worker) }
             composable("worker_attendance_tab") { WorkerAttendanceScreen(worker) }
             composable("worker_messages_tab") { MessagesScreen(mainNavController, worker.workerId) }
+            composable("worker_location_tab") { LocationScreen(mainNavController, worker, worker.role) }
         }
     }
 }
