@@ -33,10 +33,9 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val db = AppDatabase.getDatabase(context)
     var attendanceMap by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     
-    // নতুন স্টেট: ওভারটাইম এবং নাইট বিলের জন্য
     var totalOvertimeHours by remember { mutableStateOf(0.0) }
-    var nightBillAmount by remember { mutableStateOf(20.0) } // ডিফল্ট ২০ টাকা
-    var overtimeRate by remember { mutableStateOf(50.0) } // ডিফল্ট ওভারটাইম রেট (ঘণ্টায়)
+    var nightBillAmount by remember { mutableStateOf(20.0) }
+    var overtimeRate by remember { mutableStateOf(50.0) }
 
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -45,7 +44,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val monthStr = String.format(Locale.US, "%04d-%02d", year, month + 1)
 
     LaunchedEffect(Unit) {
-        // ১. এটেনডেন্স লোড
         val myAttendance = db.attendanceDao().getWorkerAttendance(worker.workerId)
         val map = mutableMapOf<Int, String>()
         myAttendance.forEach { att ->
@@ -55,11 +53,9 @@ fun WorkerAttendanceScreen(worker: Worker) {
         }
         attendanceMap = map
 
-        // ২. ওভারটাইম লোড
         val otList = db.overtimeDao().getMonthlyOvertime(worker.workerId, monthStr)
         totalOvertimeHours = otList.sumOf { it.hours }
 
-        // ৩. কোম্পানির নাইট বিল রেট লোড
         val company = db.companyDao().getCompanyById(worker.companyId)
         if (company != null) {
             nightBillAmount = company.nightBillAmount
@@ -69,13 +65,12 @@ fun WorkerAttendanceScreen(worker: Worker) {
     var presentCount = 0
     var absentCount = 0
     var offDayCount = 0
-    var nightShiftCount = 0 // নাইট শিফটের সংখ্যা
+    var nightShiftCount = 0
 
     attendanceMap.forEach { (_, status) ->
         when(status) {
             "Present" -> {
                 presentCount++
-                // যদি শিফট P/C বা রাতের হয়, তবে নাইট বিল কাউন্ট হবে (উদাহরণস্বরূপ)
                 if (worker.shift == "P/C") {
                     nightShiftCount++
                 }
@@ -85,16 +80,16 @@ fun WorkerAttendanceScreen(worker: Worker) {
         }
     }
 
-    // ⚙️ নতুন বেতন হিসাবের লজিক
-    val dailyWage = if (worker.salary > 0) worker.salary else 500.0
+    // ⚙️ নতুন বেতন হিসাবের লজিক (মাসিক বেতন থেকে দৈনিক বের করা হচ্ছে)
+    val monthlySalary = if (worker.salary > 0) worker.salary else 0.0
+    val dailyWage = if (maxDays > 0) (monthlySalary / maxDays) else 0.0
+    
     val baseSalary = presentCount * dailyWage
     val overtimeAmount = totalOvertimeHours * overtimeRate
     val totalNightBill = nightShiftCount * nightBillAmount
     
-    // মোট বেতন
     val totalSalary = baseSalary + overtimeAmount + totalNightBill
 
-    // উপস্থিতির হার
     val totalWorkingDays = presentCount + absentCount
     val presentRatio = if (totalWorkingDays > 0) (presentCount.toFloat() / totalWorkingDays.toFloat() * 100).toInt() else 0
 
@@ -108,7 +103,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)) {
             
-            // স্যালারি কার্ড
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Estimated Salary (${SimpleDateFormat("MMMM", Locale.US).format(calendar.time)})", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
@@ -116,7 +110,6 @@ fun WorkerAttendanceScreen(worker: Worker) {
                     
                     Spacer(Modifier.height(8.dp))
                     
-                    // বেতনের বিস্তারিত (যাতে শ্রমিক বুঝতে পারে)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Base", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
