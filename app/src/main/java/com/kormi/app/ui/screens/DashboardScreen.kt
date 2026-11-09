@@ -3,6 +3,7 @@ package com.kormi.app.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -310,7 +311,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
-                // 🌟 ৪. ১০০% ট্রান্সপারেন্ট এবং গোলাকার গ্লাস কার্ড
+                // 🌟 ফ্রস্টেড গ্লাস মডিউল গ্রিড (সম্পূর্ণ বক্স-মুক্ত ও গোলাকার)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -359,43 +360,43 @@ private fun StatBox(label: String, value: String, color: Color, modifier: Modifi
     }
 }
 
-// 🌟 সম্পূর্ণ ট্রান্সপারেন্ট এবং বক্স-মুক্ত গ্লাস কার্ড
+// 🌟 ১০০% ট্রান্সপারেন্ট, বক্স-মুক্ত এবং গোলাকার গ্লাস কার্ড
 @Composable
 private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-        shape = RoundedCornerShape(24.dp), // আরও গোলাকার
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.15f) // অনেক বেশি ট্রান্সপারেন্ট
-        ),
-        border = BorderStroke(1.5.dp, Brush.linearGradient(
-            colors = listOf(Color.White.copy(alpha = 0.8f), Color.White.copy(alpha = 0.1f))
-        )),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    // Card-এর বদলে Box ব্যবহার করা হলো যাতে কোনো ডিফল্ট সাদা ব্যাকগ্রাউন্ড না আসে
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(28.dp)) // সম্পূর্ণ গোলাকার কোণা
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.25f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.8f), Color.White.copy(alpha = 0.1f))
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .clickable { onClick() }
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp), 
-            verticalArrangement = Arrangement.Center, 
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // আইকনের পেছনে কোনো সাদা বক্স নেই
             Icon(
-                imageVector = item.icon, 
-                contentDescription = item.titleEn, 
-                tint = Navy, 
+                imageVector = item.icon,
+                contentDescription = item.titleEn,
+                tint = Navy,
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // টেক্সটের পেছনে কোনো সাদা বক্স নেই
-            Text(
-                text = item.titleEn, 
-                fontSize = 12.sp, 
-                fontWeight = FontWeight.Bold, 
-                color = Navy, 
-                textAlign = TextAlign.Center,
-                modifier = Modifier.background(Color.Transparent)
-            )
-        }
-    }
-}
+       
