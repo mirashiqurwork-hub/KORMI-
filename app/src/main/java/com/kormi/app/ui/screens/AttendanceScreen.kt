@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DocumentScanner
-import androidx.compose.material.icons.filled.MoreTime // নতুন আইকন
+import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -109,11 +109,10 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         }
                     },
                     actions = {
-                        // ওভারটাইম বাটন
                         IconButton(onClick = { navController.navigate("overtime_entry") }) {
                             Icon(Icons.Default.MoreTime, contentDescription = "Overtime", tint = Gold)
                         }
-                        // OCR বাটন
+                        // OCR স্ক্রিনে যাওয়ার বাটন
                         IconButton(onClick = { navController.navigate("ocr_attendance") }) {
                             Icon(Icons.Default.DocumentScanner, contentDescription = "OCR", tint = Color.White)
                         }
