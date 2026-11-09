@@ -14,6 +14,10 @@ interface CompanyDao {
     @Query("SELECT * FROM companies")
     fun getAllCompanies(): Flow<List<Company>>
 
+    // নতুন: পালা চেক করার জন্য লিস্ট
+    @Query("SELECT * FROM companies")
+    suspend fun getAllCompaniesSync(): List<Company>
+
     @Query("SELECT * FROM companies WHERE companyId = :id")
     suspend fun getCompanyById(id: Int): Company?
 
