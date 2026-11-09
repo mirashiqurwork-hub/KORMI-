@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,7 +67,7 @@ fun ProductionScreen(navController: NavController) {
     var summaryText by remember { mutableStateOf("") }
 
     val units = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")
-    val shifts = listOf("P/A", "P/B", "P/C") // A, B, C বাদ দেওয়া হলো
+    val shifts = listOf("P/A", "P/B", "P/C")
 
     val datePickerDialog = DatePickerDialog(
         context, { _, year, month, dayOfMonth ->
@@ -87,6 +88,9 @@ fun ProductionScreen(navController: NavController) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate("production_ocr") }) {
+                        Icon(Icons.Default.DocumentScanner, contentDescription = "OCR", tint = Color.White)
+                    }
                     IconButton(onClick = { navController.navigate("production_history") }) {
                         Icon(Icons.Default.History, contentDescription = "History", tint = Color.White)
                     }
@@ -102,7 +106,12 @@ fun ProductionScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF2F4F7))
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
@@ -176,9 +185,7 @@ fun ProductionScreen(navController: NavController) {
                         fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
-                                scope.launch {
-                                    db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
-                                }
+                                db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="MACHINE", machineName=mName, weightKg=kg, inchargeName=inc, reportedBy="Admin"))
                                 val jsonObj = JSONObject()
                                 jsonObj.put("date", date)
                                 jsonObj.put("unit", u)
@@ -200,9 +207,7 @@ fun ProductionScreen(navController: NavController) {
                         val bBags = packBags.toIntOrNull() ?: 0
                         val bKg = packKg.toDoubleOrNull() ?: 0.0
                         if (bBags > 0 || bKg > 0.0) {
-                            scope.launch {
-                                db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
-                            }
+                            db.productionDao().insertProduction(Production(date=date, unit=u, shift=s, section="PACKING", machineName="PACKING", weightKg=bKg, packingBags=bBags, packingWeightKg=bKg, inchargeName=inc, reportedBy="Admin"))
                             
                             val jsonObj = JSONObject()
                             jsonObj.put("date", date)
@@ -240,7 +245,7 @@ fun ProductionScreen(navController: NavController) {
             ) {
                 Text("Save & Generate Summary", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 
