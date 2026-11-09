@@ -74,8 +74,11 @@ class MainActivity : ComponentActivity() {
                         
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
                         composable("manpower") { ManpowerScreen(navController) }
+                        
                         composable("production") { ProductionScreen(navController) }
                         composable("production_calculator") { ProductionCalculatorScreen(navController) }
+                        composable("production_history") { ProductionHistoryScreen(navController) } // নতুন রুট
+                        
                         composable("breakdown") { BreakdownScreen(navController) }
                         composable("admin") { AdminScreen(navController) }
                         
@@ -95,7 +98,6 @@ class MainActivity : ComponentActivity() {
                             NotificationsScreen(navController, loggedInWorker, currentUserRole) 
                         }
                         
-                        // এখানে LocationScreen-এ ডাটা পাঠানো হলো
                         composable("location") { 
                             LocationScreen(navController, loggedInWorker, currentUserRole) 
                         }
