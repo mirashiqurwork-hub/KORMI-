@@ -61,7 +61,7 @@ fun RegisterScreen(navController: NavController) {
     var selectedRole by remember { mutableStateOf("Worker") }
     var selectedDesignation by remember { mutableStateOf("L/R") }
     var selectedCompany by remember { mutableStateOf<Company?>(null) }
-    var selectedShift by remember { mutableStateOf("A") }
+    var selectedShift by remember { mutableStateOf("P/A") }
     var selectedSection by remember { mutableStateOf("BACKSIDE") }
     var selectedUnit by remember { mutableStateOf("UNIT-01") }
     var selectedOffDay by remember { mutableStateOf("FRIDAY") }
@@ -166,13 +166,13 @@ fun RegisterScreen(navController: NavController) {
                 "Worker" -> {
                     val workerTypes = listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
                     DropdownField("Worker Type", selectedDesignation, workerTypes) { selectedDesignation = workerTypes[it] }
-                    DropdownField("Shift", selectedShift, listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Shift", selectedShift, listOf("P/A", "P/B", "P/C")) { selectedShift = listOf("P/A", "P/B", "P/C")[it] } // এখানে পরিবর্তন
                     DropdownField("Section", selectedSection, listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
                 }
                 "Officer" -> {
                     val officerTypes = listOf("Supervisor", "APO", "SR APO", "PO", "SPO")
                     DropdownField("Officer Type", selectedDesignation, officerTypes) { selectedDesignation = officerTypes[it] }
-                    DropdownField("Shift", selectedShift, listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")) { selectedShift = listOf("P/A-R/A", "P/B-R/B", "P/C-R/C")[it] }
+                    DropdownField("Shift", selectedShift, listOf("P/A", "P/B", "P/C")) { selectedShift = listOf("P/A", "P/B", "P/C")[it] } // এখানে পরিবর্তন
                     DropdownField("Section", selectedSection, listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")) { selectedSection = listOf("ALL SECTION", "BACKSIDE", "RING", "AUTOCONE", "PACKING")[it] }
                 }
             }
