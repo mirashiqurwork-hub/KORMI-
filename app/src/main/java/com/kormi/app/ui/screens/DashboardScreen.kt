@@ -22,12 +22,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -127,12 +128,10 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding)) {
             
-            // 🌟 ১. রিং ফ্রেমের শ্যাডো (ডান থেকে বামে বড় থেকে ছোট)
+            // ১. রিং ফ্রেমের শ্যাডো (ডান থেকে বামে বড় থেকে ছোট)
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
-                
-                // ডান দিক থেকে শুরু করে বাম দিকে হেলে থাকা মেশিনের স্ট্রাকচার
                 val startX = w * 1.1f
                 val startY = h * 0.2f
                 val endX = -w * 0.2f
@@ -143,12 +142,11 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     val fraction = i.toFloat() / steps
                     val x = startX + (endX - startX) * fraction
                     val y = startY + (endY - startY) * fraction
-                    val scale = 1f - (fraction * 0.7f) // বড় থেকে ছোট হওয়া
+                    val scale = 1f - (fraction * 0.7f)
                     
                     val frameWidth = 120f * scale
                     val frameHeight = 400f * scale
                     
-                    // মেশিনের ফ্রেম (হালকা নীলচে-ধূসর)
                     drawRoundRect(
                         color = Color(0xFFE5E9F0).copy(alpha = 0.6f),
                         topLeft = Offset(x, y),
@@ -156,7 +154,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                         cornerRadius = CornerRadius(20f, 20f)
                     )
                     
-                    // মেশিনের ভেতরের স্পিন্ডল (ছোট ছোট দাগ)
                     for (j in 1..4) {
                         drawCircle(
                             color = Color(0xFFD0D7E5),
@@ -167,7 +164,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 }
             }
 
-            // 🌟 ২. নীল হেডার এবং গোল্ডেন ওয়েভ
+            // ২. নীল হেডার এবং গোল্ডেন ওয়েভ
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val path = Path().apply {
                     moveTo(0f, 180f)
@@ -188,7 +185,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 drawPath(goldPath, Gold)
             }
 
-            // 🌟 ৩. কারখানার শ্যাডো ও ধোঁয়া (নিচে)
+            // ৩. কারখানার শ্যাডো ও ধোঁয়া (নিচে)
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -313,7 +310,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
-                // 🌟 ৪. গ্লাসমরফিজম মডিউল গ্রিড
+                // 🌟 ফ্রস্টেড গ্লাস মডিউল গ্রিড
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -362,23 +359,41 @@ private fun StatBox(label: String, value: String, color: Color, modifier: Modifi
     }
 }
 
-// 🌟 গ্লাসমরফিজম কার্ড ডিজাইন
+// 🌟 নতুন ফ্রস্টেড গ্লাস কার্ড ডিজাইন (সাদা বক্স সরানো হয়েছে)
 @Composable
 private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.6f) // কাঁচের মতো স্বচ্ছ
+            containerColor = Color.White.copy(alpha = 0.35f) // অত্যন্ত ট্রান্সপারেন্ট
         ),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.8f)), // কাঁচের বর্ডার
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.5.dp, Brush.linearGradient(
+            colors = listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.2f))
+        )),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(imageVector = item.icon, contentDescription = item.titleEn, tint = Navy, modifier = Modifier.size(32.dp))
-            Spacer(Modifier.height(8.dp))
-            Text(text = item.titleEn, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Navy, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp), 
+            verticalArrangement = Arrangement.Center, 
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // সাদা বক্স ছাড়া সরাসরি আইকন
+            Icon(
+                imageVector = item.icon, 
+                contentDescription = item.titleEn, 
+                tint = Navy, 
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = item.titleEn, 
+                fontSize = 12.sp, 
+                fontWeight = FontWeight.Bold, 
+                color = Navy, 
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
