@@ -7,12 +7,14 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
@@ -35,7 +37,15 @@ import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
-data class ParsedData(var id: String, var name: String)
+// নতুন ডাটা ক্লাস, যেখানে সব ফিল্ড এডিট করা যাবে
+data class ParsedData(
+    var id: String = "",
+    var name: String = "",
+    var phone: String = "",
+    var section: String = "BACKSIDE",
+    var shift: String = "P/A",
+    var unit: String = "UNIT-01"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,22 +173,12 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
             }
 
             if (extractedText.isNotEmpty() && parsedList.isEmpty()) {
-                Text("Raw Text:", fontWeight = FontWeight.Bold, color = Navy)
-                Spacer(Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = extractedText,
-                    onValueChange = { extractedText = it },
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-                )
-                
-                Spacer(Modifier.height(12.dp))
-                
                 Button(
                     onClick = {
                         parsedList.clear()
                         val lines = extractedText.lines()
+                        
+                        // সাধারণ regex যা আইডি (UPD, UCPD) বা লম্বা সংখ্যা খুঁজে বের করে
                         val idRegex = Regex("""[A-Z]{2,4}\d{5,7}""")
                         val numberRegex = Regex("""^\d{5,7}""")
 
@@ -190,30 +190,34 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
                             
                             if (idMatch != null) {
                                 val id = idMatch.value
-                                var name = trimmedLine.replace(id, "").trim()
-                                name = name.replace(Regex("""^\d+\s*"""), "").trim()
+                                val remainingText = trimmedLine.replace(id, "").trim()
                                 
-                                if (parsedList.none { it.id == id }) {
-                                    parsedList.add(ParsedData(id, name))
-                                }
+                                // ডিফল্টভাবে বাকি লেখাটা নাম হিসেবে ধরবে
+                                parsedList.add(ParsedData(id = id, name = remainingText))
+                            } else if (trimmedLine.length > 3 && !trimmedLine.all { it.isDigit() }) {
+                                // যদি কোনো আইডি না পাওয়া যায় কিন্তু টেক্সট থাকে, তবে ডামি ডাটা তৈরি করবে যাতে ইউজার এডিট করতে পারে
+                                parsedList.add(ParsedData(id = "MISSING_ID", name = trimmedLine))
                             }
                         }
                         if (parsedList.isEmpty()) {
-                            Toast.makeText(context, "কোনো আইডি খুঁজে পাওয়া যায়নি!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "কোনো ডাটা খুঁজে পাওয়া যায়নি! ম্যানুয়ালি এড করুন।", Toast.LENGTH_SHORT).show()
+                            // ডামি রো তৈরি করা যাতে ইউজার ম্যানুয়ালি লিখতে পারে
+                            parsedList.add(ParsedData())
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Navy),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Extract IDs & Names", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Extract & Edit Data", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
             Spacer(Modifier.height(16.dp))
 
+            // এডিটেবল লিস্ট
             if (parsedList.isNotEmpty()) {
-                Text("Parsed Data (${parsedList.size} items) - Edit if needed:", fontWeight = FontWeight.Bold, color = Navy)
+                Text("Parsed Data (${parsedList.size} items) - Edit all fields:", fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(8.dp))
                 
                 LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -224,27 +228,91 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
                             shape = RoundedCornerShape(8.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = item.id,
-                                    onValueChange = { parsedList[index] = item.copy(id = it) },
-                                    label = { Text("ID", fontSize = 10.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-                                )
-                                OutlinedTextField(
-                                    value = item.name,
-                                    onValueChange = { parsedList[index] = item.copy(name = it) },
-                                    label = { Text("Name", fontSize = 10.sp) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-                                )
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // ID এবং Name
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = item.id,
+                                        onValueChange = { parsedList[index] = item.copy(id = it) },
+                                        label = { Text("ID", fontSize = 10.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                    )
+                                    OutlinedTextField(
+                                        value = item.name,
+                                        onValueChange = { parsedList[index] = item.copy(name = it) },
+                                        label = { Text("Name", fontSize = 10.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                    )
+                                }
+
+                                // Phone এবং Unit
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = item.phone,
+                                        onValueChange = { parsedList[index] = item.copy(phone = it) },
+                                        label = { Text("Phone", fontSize = 10.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                    )
+                                    // Unit Dropdown
+                                    var expandedUnit by remember { mutableStateOf(false) }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        OutlinedTextField(
+                                            value = item.unit, onValueChange = {}, readOnly = true, label = { Text("Unit", fontSize = 10.sp) },
+                                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.clickable { expandedUnit = true }) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                        )
+                                        Box(modifier = Modifier.matchParentSize().clickable { expandedUnit = true })
+                                        DropdownMenu(expanded = expandedUnit, onDismissRequest = { expandedUnit = false }) {
+                                            listOf("UNIT-01", "UNIT-02", "G/F", "F/F").forEach { u ->
+                                                DropdownMenuItem(text = { Text(u) }, onClick = { parsedList[index] = item.copy(unit = u); expandedUnit = false })
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Shift এবং Section
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    // Shift Dropdown
+                                    var expandedShift by remember { mutableStateOf(false) }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        OutlinedTextField(
+                                            value = item.shift, onValueChange = {}, readOnly = true, label = { Text("Shift", fontSize = 10.sp) },
+                                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.clickable { expandedShift = true }) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                        )
+                                        Box(modifier = Modifier.matchParentSize().clickable { expandedShift = true })
+                                        DropdownMenu(expanded = expandedShift, onDismissRequest = { expandedShift = false }) {
+                                            listOf("P/A", "P/B", "P/C").forEach { s ->
+                                                DropdownMenuItem(text = { Text(s) }, onClick = { parsedList[index] = item.copy(shift = s); expandedShift = false })
+                                            }
+                                        }
+                                    }
+
+                                    // Section Dropdown
+                                    var expandedSection by remember { mutableStateOf(false) }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        OutlinedTextField(
+                                            value = item.section, onValueChange = {}, readOnly = true, label = { Text("Section", fontSize = 10.sp) },
+                                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.clickable { expandedSection = true }) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                        )
+                                        Box(modifier = Modifier.matchParentSize().clickable { expandedSection = true })
+                                        DropdownMenu(expanded = expandedSection, onDismissRequest = { expandedSection = false }) {
+                                            listOf("BACKSIDE", "RING", "AUTOCONE", "PACKING").forEach { s ->
+                                                DropdownMenuItem(text = { Text(s) }, onClick = { parsedList[index] = item.copy(section = s); expandedSection = false })
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -257,24 +325,19 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
                             isSaving = true
                             scope.launch {
                                 var savedCount = 0
-                                val defaultCompanyId = loggedInWorker?.companyId ?: 1
-                                val defaultUnit = loggedInWorker?.unit ?: "UNIT-01"
-                                val defaultShift = loggedInWorker?.shift ?: "P/A"
-                                val defaultSection = loggedInWorker?.section ?: "BACKSIDE"
-
                                 parsedList.forEach { data ->
-                                    if (data.id.isNotBlank() && data.name.isNotBlank()) {
+                                    if (data.id.isNotBlank() && data.id != "MISSING_ID" && data.name.isNotBlank()) {
                                         val newWorker = Worker(
                                             workerId = data.id,
                                             fullName = data.name,
                                             role = "Worker",
                                             designation = "Helper",
-                                            companyId = defaultCompanyId,
-                                            phone = "",
+                                            companyId = loggedInWorker?.companyId ?: 1,
+                                            phone = data.phone,
                                             status = "Inactive", // ইনঅ্যাক্টিভ হিসেবে সেভ হবে
-                                            unit = defaultUnit,
-                                            shift = defaultShift,
-                                            section = defaultSection,
+                                            unit = data.unit,
+                                            shift = data.shift,
+                                            section = data.section,
                                             salary = 500.0,
                                             passwordHash = "1234"
                                         )
@@ -286,8 +349,6 @@ fun OcrScreen(navController: NavController, ocrType: String, loggedInWorker: Wor
                                 isSaving = false
                                 navController.popBackStack()
                             }
-                        } else {
-                            Toast.makeText(context, "এই মডিউলের সেভ লজিক পরবর্তী ধাপে আসবে", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
