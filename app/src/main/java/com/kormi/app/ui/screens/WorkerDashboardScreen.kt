@@ -62,7 +62,6 @@ fun WorkerDashboardScreen(mainNavController: NavController, worker: Worker?) {
                     onClick = { navController.navigate("worker_messages_tab") { popUpTo(navController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = Navy, unselectedIconColor = TextSecondary, indicatorColor = Navy.copy(alpha = 0.1f))
                 )
-                // নতুন Location ট্যাব
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.LocationOn, contentDescription = "Location") },
                     label = { Text("Location", fontSize = 10.sp) },
