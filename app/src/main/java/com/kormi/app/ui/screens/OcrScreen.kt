@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,14 +34,15 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 
-data class ParsedData(val id: String, val name: String)
+// পার্স করা ডাটার জন্য ডাটা ক্লাস
+data class ParsedData(var id: String, var name: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OcrScreen(navController: NavController, ocrType: String) {
     val context = LocalContext.current
     var extractedText by remember { mutableStateOf("") }
-    var parsedList by remember { mutableStateOf<List<ParsedData>>(emptyList()) }
+    var parsedList = remember { mutableStateListOf<ParsedData>() }
     var isProcessing by remember { mutableStateOf(false) }
 
     // গ্যালারি
@@ -106,8 +109,11 @@ fun OcrScreen(navController: NavController, ocrType: String) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF2F4F7))
+                .padding(padding)
+                .padding(16.dp)
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -140,67 +146,57 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             if (isProcessing) {
-                CircularProgressIndicator(color = Navy)
-                Spacer(Modifier.height(8.dp))
-                Text("Processing Image...", color = TextSecondary)
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Navy)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Processing Image...", color = TextSecondary)
+                    }
+                }
             }
 
             if (extractedText.isNotEmpty()) {
-                Text("Raw Text (Edit if needed):", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
-                Spacer(Modifier.height(8.dp))
-                
+                Text("Raw Text:", fontWeight = FontWeight.Bold, color = Navy)
+                Spacer(Modifier.height(4.dp))
                 OutlinedTextField(
                     value = extractedText,
                     onValueChange = { extractedText = it },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp, max = 300.dp),
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
                 )
                 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
                 
                 Button(
                     onClick = {
-                        // পার্সিং লজিক: Regex দিয়ে আইডি এবং নাম আলাদা করা
+                        parsedList.clear()
                         val lines = extractedText.lines()
-                        val tempList = mutableListOf<ParsedData>()
-                        
-                        // Regex যা UCPD, UPD, UQC ইত্যাদি দিয়ে শুরু হওয়া আইডি খুঁজে বের করবে
-                        val idRegex = Regex("""[A-Z]{2,4}\d{5,7}""") 
-                        // সাধারণ সংখ্যার আইডির জন্য (যেমন 503174)
-                        val numberRegex = Regex("""^\d{5,7}$""")
+                        val idRegex = Regex("""[A-Z]{2,4}\d{5,7}""")
+                        val numberRegex = Regex("""^\d{5,7}""")
 
                         for (line in lines) {
                             val trimmedLine = line.trim()
-                            if (trimmedLine.isEmpty()) continue
+                            if (trimmedLine.isEmpty() || trimmedLine.contains("Employee", ignoreCase = true) || trimmedLine.contains("Name", ignoreCase = true) || trimmedLine.contains("SL", ignoreCase = true)) continue
 
-                            // ১. অক্ষর+সংখ্যা আইডি খোঁজা
-                            val idMatch = idRegex.find(trimmedLine)
+                            val idMatch = idRegex.find(trimmedLine) ?: numberRegex.find(trimmedLine)
+                            
                             if (idMatch != null) {
                                 val id = idMatch.value
-                                val name = trimmedLine.replace(id, "").replace(Regex("""^\d+\s*"""), "").trim()
-                                tempList.add(ParsedData(id, name))
-                                continue
-                            }
-
-                            // ২. শুধু সংখ্যার আইডি খোঁজা
-                            val parts = trimmedLine.split(" ")
-                            for (part in parts) {
-                                if (numberRegex.matches(part) && part.length >= 5) {
-                                    val id = part
-                                    val name = trimmedLine.replace(id, "").replace(Regex("""^\d+\s*"""), "").trim()
-                                    if (name.isNotEmpty()) {
-                                        tempList.add(ParsedData(id, name))
-                                        break
-                                    }
+                                var name = trimmedLine.replace(id, "").trim()
+                                // সিরিয়াল নম্বর বা বাড়তি সংখ্যা সরানো
+                                name = name.replace(Regex("""^\d+\s*"""), "").trim()
+                                
+                                // ডুপ্লিকেট চেক
+                                if (parsedList.none { it.id == id }) {
+                                    parsedList.add(ParsedData(id, name))
                                 }
                             }
                         }
-                        parsedList = tempList
-                        if (tempList.isEmpty()) {
+                        if (parsedList.isEmpty()) {
                             Toast.makeText(context, "কোনো আইডি খুঁজে পাওয়া যায়নি!", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -212,28 +208,54 @@ fun OcrScreen(navController: NavController, ocrType: String) {
                 }
             }
 
-            // পার্স করা লিস্ট দেখানো
+            Spacer(Modifier.height(16.dp))
+
+            // এডিটেবল লিস্ট
             if (parsedList.isNotEmpty()) {
-                Spacer(Modifier.height(24.dp))
-                Text("Parsed Data (${parsedList.size} items):", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
+                Text("Parsed Data (${parsedList.size} items) - Edit if needed:", fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(8.dp))
                 
-                parsedList.forEach { data ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(text = data.id, fontWeight = FontWeight.Bold, color = Navy)
-                            Text(text = data.name, color = TextSecondary)
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(parsedList.size) { index ->
+                        val item = parsedList[index]
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // আইডি এডিট
+                                OutlinedTextField(
+                                    value = item.id,
+                                    onValueChange = { parsedList[index] = item.copy(id = it) },
+                                    label = { Text("ID", fontSize = 10.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                )
+                                // নাম এডিট
+                                OutlinedTextField(
+                                    value = item.name,
+                                    onValueChange = { parsedList[index] = item.copy(name = it) },
+                                    label = { Text("Name", fontSize = 10.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {
+                        // পরবর্তী ধাপে ডাটাবেসে সেভ করার লজিক এখানে আসবে
                         Toast.makeText(context, "পরবর্তী ধাপে ডাটাবেসে সেভ হবে", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
