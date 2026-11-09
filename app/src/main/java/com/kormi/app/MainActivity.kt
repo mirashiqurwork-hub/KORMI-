@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
                     var currentUserId by remember { mutableStateOf("") }
                     var currentUserRole by remember { mutableStateOf("") }
 
-                    // নোটিফিকেশন পারমিশন রিকোয়েস্ট
                     val permissionLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission()
                     ) { isGranted -> }
@@ -54,7 +53,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // অটোমেটিক পালা পরিবর্তনের লজিক
                         val companies = db.companyDao().getAllCompaniesSync()
                         val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                         val todayDayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date()).uppercase()
@@ -111,8 +109,8 @@ class MainActivity : ComponentActivity() {
                         composable("add_worker") { AddWorkerScreen(navController) }
                         
                         composable("ocr_worker") { OcrScreen(navController, "Worker List", loggedInWorker, currentUserRole) }
-                        composable("ocr_attendance") { OcrScreen(navController, "Attendance", loggedInWorker, currentUserRole) }
-                        composable("ocr_production") { OcrScreen(navController, "Production", loggedInWorker, currentUserRole) }
+                        // নতুন রুট
+                        composable("ocr_attendance") { OcrAttendanceScreen(navController, loggedInWorker) }
                         
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
                         composable("overtime_entry") { OvertimeEntryScreen(navController) }
