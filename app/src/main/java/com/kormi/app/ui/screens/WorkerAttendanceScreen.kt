@@ -32,6 +32,11 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     var attendanceMap by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    
+    // নতুন স্টেট: ওভারটাইম এবং নাইট বিলের জন্য
+    var totalOvertimeHours by remember { mutableStateOf(0.0) }
+    var nightBillAmount by remember { mutableStateOf(20.0) } // ডিফল্ট ২০ টাকা
+    var overtimeRate by remember { mutableStateOf(50.0) } // ডিফল্ট ওভারটাইম রেট (ঘণ্টায়)
 
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -40,6 +45,7 @@ fun WorkerAttendanceScreen(worker: Worker) {
     val monthStr = String.format(Locale.US, "%04d-%02d", year, month + 1)
 
     LaunchedEffect(Unit) {
+        // ১. এটেনডেন্স লোড
         val myAttendance = db.attendanceDao().getWorkerAttendance(worker.workerId)
         val map = mutableMapOf<Int, String>()
         myAttendance.forEach { att ->
@@ -48,39 +54,86 @@ fun WorkerAttendanceScreen(worker: Worker) {
             }
         }
         attendanceMap = map
+
+        // ২. ওভারটাইম লোড
+        val otList = db.overtimeDao().getMonthlyOvertime(worker.workerId, monthStr)
+        totalOvertimeHours = otList.sumOf { it.hours }
+
+        // ৩. কোম্পানির নাইট বিল রেট লোড
+        val company = db.companyDao().getCompanyById(worker.companyId)
+        if (company != null) {
+            nightBillAmount = company.nightBillAmount
+        }
     }
 
     var presentCount = 0
     var absentCount = 0
     var offDayCount = 0
+    var nightShiftCount = 0 // নাইট শিফটের সংখ্যা
+
     attendanceMap.forEach { (_, status) ->
         when(status) {
-            "Present" -> presentCount++
+            "Present" -> {
+                presentCount++
+                // যদি শিফট P/C বা রাতের হয়, তবে নাইট বিল কাউন্ট হবে (উদাহরণস্বরূপ)
+                if (worker.shift == "P/C") {
+                    nightShiftCount++
+                }
+            }
             "Absent" -> absentCount++
             "Off Day" -> offDayCount++
         }
     }
 
-    // Present Ratio (উপস্থিতির হার) হিসাব
+    // ⚙️ নতুন বেতন হিসাবের লজিক
+    val dailyWage = if (worker.salary > 0) worker.salary else 500.0
+    val baseSalary = presentCount * dailyWage
+    val overtimeAmount = totalOvertimeHours * overtimeRate
+    val totalNightBill = nightShiftCount * nightBillAmount
+    
+    // মোট বেতন
+    val totalSalary = baseSalary + overtimeAmount + totalNightBill
+
+    // উপস্থিতির হার
     val totalWorkingDays = presentCount + absentCount
     val presentRatio = if (totalWorkingDays > 0) (presentCount.toFloat() / totalWorkingDays.toFloat() * 100).toInt() else 0
 
-    val dailyWage = if (worker.salary > 0) worker.salary else 500.0
-    val estimatedSalary = presentCount * dailyWage
-
     Scaffold(
-        topBar = { TopAppBar(title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)) }
+        topBar = { 
+            TopAppBar(
+                title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, 
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
+            ) 
+        }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)) {
             
+            // স্যালারি কার্ড
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Estimated Salary (${SimpleDateFormat("MMMM", Locale.US).format(calendar.time)})", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                    Text("৳ ${String.format(Locale.US, "%.2f", estimatedSalary)}", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     
+                    Spacer(Modifier.height(8.dp))
+                    
+                    // বেতনের বিস্তারিত (যাতে শ্রমিক বুঝতে পারে)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Base", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                            Text("৳${String.format(Locale.US, "%.0f", baseSalary)}", color = Color.White, fontSize = 12.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Overtime", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                            Text("৳${String.format(Locale.US, "%.0f", overtimeAmount)}", color = Color.White, fontSize = 12.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Night Bill", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                            Text("৳${String.format(Locale.US, "%.0f", totalNightBill)}", color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+
                     Spacer(Modifier.height(12.dp))
                     
-                    // Present Ratio Progress Bar
                     Text("Present Ratio: $presentRatio%", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     LinearProgressIndicator(
