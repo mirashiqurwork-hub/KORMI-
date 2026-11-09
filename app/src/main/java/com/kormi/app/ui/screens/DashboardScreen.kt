@@ -128,7 +128,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding)) {
             
-            // ১. রিং ফ্রেমের শ্যাডো (ডান থেকে বামে বড় থেকে ছোট)
+            // ১. রিং ফ্রেমের শ্যাডো
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -164,7 +164,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 }
             }
 
-            // ২. নীল হেডার এবং গোল্ডেন ওয়েভ
+            // ২. নীল হেডার
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val path = Path().apply {
                     moveTo(0f, 180f)
@@ -185,7 +185,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 drawPath(goldPath, Gold)
             }
 
-            // ৩. কারখানার শ্যাডো ও ধোঁয়া (নিচে)
+            // ৩. কারখানার শ্যাডো
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -282,7 +282,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     }
                 }
 
-                // Hero Card (Navy & Gold)
+                // Hero Card
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -310,7 +310,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
-                // 🌟 ফ্রস্টেড গ্লাস মডিউল গ্রিড
+                // 🌟 ৪. ১০০% ট্রান্সপারেন্ট এবং গোলাকার গ্লাস কার্ড
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -359,40 +359,42 @@ private fun StatBox(label: String, value: String, color: Color, modifier: Modifi
     }
 }
 
-// 🌟 নতুন ফ্রস্টেড গ্লাস কার্ড ডিজাইন (সাদা বক্স সরানো হয়েছে)
+// 🌟 সম্পূর্ণ ট্রান্সপারেন্ট এবং বক্স-মুক্ত গ্লাস কার্ড
 @Composable
 private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp), // আরও গোলাকার
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.35f) // অত্যন্ত ট্রান্সপারেন্ট
+            containerColor = Color.White.copy(alpha = 0.15f) // অনেক বেশি ট্রান্সপারেন্ট
         ),
         border = BorderStroke(1.5.dp, Brush.linearGradient(
-            colors = listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.2f))
+            colors = listOf(Color.White.copy(alpha = 0.8f), Color.White.copy(alpha = 0.1f))
         )),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp), 
+            modifier = Modifier.fillMaxSize().padding(8.dp), 
             verticalArrangement = Arrangement.Center, 
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // সাদা বক্স ছাড়া সরাসরি আইকন
+            // আইকনের পেছনে কোনো সাদা বক্স নেই
             Icon(
                 imageVector = item.icon, 
                 contentDescription = item.titleEn, 
                 tint = Navy, 
                 modifier = Modifier.size(36.dp)
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            // টেক্সটের পেছনে কোনো সাদা বক্স নেই
             Text(
                 text = item.titleEn, 
                 fontSize = 12.sp, 
                 fontWeight = FontWeight.Bold, 
                 color = Navy, 
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.background(Color.Transparent)
             )
         }
     }
