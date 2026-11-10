@@ -7,8 +7,9 @@ import androidx.room.PrimaryKey
 data class Message(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val senderId: String,
-    val receiverId: String,
+    val receiverId: String, // ১-১ চ্যাটের জন্য
+    val groupId: Int? = null, // গ্রুপ চ্যাটের জন্য (যদি গ্রুপ হয়)
     val messageText: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val isRead: Boolean = false // নতুন ফিল্ড
+    val isRead: Boolean = false
 )
