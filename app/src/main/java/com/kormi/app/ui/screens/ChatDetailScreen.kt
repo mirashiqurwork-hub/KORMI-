@@ -16,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Message
-import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -47,7 +45,7 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
         db.messageDao().markMessagesAsRead(otherUserId, currentUserId)
     }
 
-    // নতুন মেসেজ আসলে নিচে স্ক্রল করা
+    // নতুন মেসেজ আসলে অটোমেটিক নিচে স্ক্রল করা
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -72,8 +70,12 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
             )
         },
         bottomBar = {
+            // নিচের ফিক্সড টেক্সট বক্স
             Row(
-                modifier = Modifier.fillMaxWidth().background(Color.White).padding(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -123,7 +125,8 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                // 🌟 এখানে verticalArrangement = Arrangement.Bottom দেওয়া হয়েছে যাতে মেসেজ নিচ থেকে শুরু হয়
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom)
             ) {
                 items(messages) { msg ->
                     val isMe = msg.senderId == currentUserId
