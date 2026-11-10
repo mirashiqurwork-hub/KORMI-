@@ -130,11 +130,23 @@ class MainActivity : ComponentActivity() {
                         composable("add_company") { AddCompanyScreen(navController) }
                         composable("manage_companies") { ManageCompaniesScreen(navController) }
                         
+                        // 🌟 চ্যাট রুটগুলো
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
                             val receiverId = backStackEntry.arguments?.getString("receiverId") ?: ""
                             ChatDetailScreen(navController, senderId, receiverId)
+                        }
+                        
+                        // নতুন গ্রুপ চ্যাট রুট
+                        composable("create_group/{currentUserId}") { backStackEntry ->
+                            val currentUserIdArg = backStackEntry.arguments?.getString("currentUserId") ?: ""
+                            CreateGroupScreen(navController, currentUserIdArg)
+                        }
+                        composable("group_chat/{currentUserId}/{groupId}") { backStackEntry ->
+                            val currentUserIdArg = backStackEntry.arguments?.getString("currentUserId") ?: ""
+                            val groupId = backStackEntry.arguments?.getString("groupId")?.toIntOrNull() ?: 0
+                            GroupChatDetailScreen(navController, currentUserIdArg, groupId)
                         }
                         
                         composable("notifications") { 
