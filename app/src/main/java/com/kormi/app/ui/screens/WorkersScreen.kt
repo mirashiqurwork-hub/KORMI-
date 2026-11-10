@@ -4,7 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -53,8 +57,7 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     
     val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
-    // ⚠️⚠️⚠️ এখানে আপনার Apps Script এর Web App URL টি বসান ⚠️⚠️⚠️
-    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
+    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
 
     val filteredWorkers = allWorkers.filter { worker ->
         val matchesSearch = worker.fullName.contains(searchQuery, ignoreCase = true) ||
@@ -148,13 +151,18 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
                 trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Navy) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.6f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.6f),
+                    focusedBorderColor = Navy.copy(alpha = 0.5f),
+                    unfocusedBorderColor = Color.White
+                ),
                 singleLine = true
             )
 
             ScrollableTabRow(
                 selectedTabIndex = sections.indexOf(selectedSection),
-                containerColor = Color.White,
+                containerColor = Color.Transparent,
                 contentColor = Navy,
                 edgePadding = 16.dp
             ) {
@@ -247,27 +255,39 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
     }
 }
 
+// 🌟 নতুন গ্লাস-শ্যাডো ওয়ার্কার কার্ড
 @Composable
 fun WorkerCard(worker: Worker, navController: NavController) {
     val context = LocalContext.current
     
-    Card(
-        onClick = { navController.navigate("worker_details/${worker.workerId}") },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.2f))
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color.White, Color.White.copy(alpha = 0.2f))
+                ),
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable { navController.navigate("worker_details/${worker.workerId}") }
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = worker.fullName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Spacer(Modifier.height(4.dp))
-                Text(text = "Card: ${worker.workerId}", fontSize = 12.sp, color = TextSecondary)
-                Text(text = "Sec: ${worker.section ?: "N/A"} | Status: ${worker.status}", fontSize = 12.sp, color = TextSecondary)
+                Text(text = "Card: ${worker.workerId}", fontSize = 12.sp, color = Navy.copy(alpha = 0.7f))
+                Text(text = "Sec: ${worker.section ?: "N/A"} | Status: ${worker.status}", fontSize = 12.sp, color = Navy.copy(alpha = 0.7f))
             }
             IconButton(onClick = {
                 if (worker.phone.isNotBlank()) {
