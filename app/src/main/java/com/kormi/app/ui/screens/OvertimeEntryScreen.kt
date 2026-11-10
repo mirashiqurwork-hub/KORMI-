@@ -23,11 +23,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Overtime
+import com.kormi.app.data.SyncHelper
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -54,7 +57,6 @@ fun OvertimeEntryScreen(navController: NavController) {
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // শ্রমিক খোঁজার ফাংশন
     fun searchWorker() {
         if (workerIdInput.isBlank()) {
             Toast.makeText(context, "কার্ড নম্বর দিন", Toast.LENGTH_SHORT).show()
@@ -107,7 +109,6 @@ fun OvertimeEntryScreen(navController: NavController) {
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     
-                    // কার্ড নম্বর ইনপুট
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = workerIdInput,
@@ -132,7 +133,6 @@ fun OvertimeEntryScreen(navController: NavController) {
                         }
                     }
 
-                    // শ্রমিক পাওয়া গেলে তার তথ্য দেখাবে
                     if (foundWorker != null) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Navy.copy(alpha = 0.05f)),
@@ -146,7 +146,6 @@ fun OvertimeEntryScreen(navController: NavController) {
 
                         Spacer(Modifier.height(8.dp))
                         
-                        // ওভারটাইম ঘণ্টা ইনপুট
                         OutlinedTextField(
                             value = overtimeHours,
                             onValueChange = { overtimeHours = it },
@@ -163,6 +162,7 @@ fun OvertimeEntryScreen(navController: NavController) {
                                 val hours = overtimeHours.toDoubleOrNull() ?: 0.0
                                 if (hours > 0) {
                                     scope.launch {
+                                        // লোকাল ডাটাবেসে সেভ
                                         db.overtimeDao().insertOvertime(
                                             Overtime(
                                                 workerId = foundWorker!!.workerId,
@@ -170,7 +170,17 @@ fun OvertimeEntryScreen(navController: NavController) {
                                                 hours = hours
                                             )
                                         )
-                                        Toast.makeText(context, "ওভারটাইম সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
+                                        
+                                        // গুগল শিটে সিঙ্ক
+                                        val syncArray = JSONArray()
+                                        val jsonObj = JSONObject()
+                                        jsonObj.put("date", selectedDate)
+                                        jsonObj.put("workerId", foundWorker!!.workerId)
+                                        jsonObj.put("hours", hours)
+                                        syncArray.put(jsonObj)
+                                        SyncHelper.postData("syncOvertime", syncArray)
+
+                                        Toast.makeText(context, "ওভারটাইম সেভ ও সিঙ্ক হয়েছে!", Toast.LENGTH_SHORT).show()
                                         workerIdInput = ""
                                         overtimeHours = ""
                                         foundWorker = null
