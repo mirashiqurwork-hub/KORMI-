@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
+import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 
@@ -32,6 +35,7 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val workers by db.workerDao().getAllWorkers().collectAsState(initial = emptyList())
+    val groups by db.chatGroupDao().getGroupsByUser(currentUserId).collectAsState(initial = emptyList())
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -50,11 +54,19 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate("create_group/$currentUserId") },
+                containerColor = Navy,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Create Group")
+            }
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(padding)) {
             
-            // সার্চ বার
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -76,18 +88,38 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // অ্যাডমিন কার্ড (যদি লগইন করা ইউজার কর্মী হয়)
+                // গ্রুপ লিস্ট সেকশন
+                if (groups.isNotEmpty() && searchQuery.isEmpty()) {
+                    item {
+                        Text("Groups", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                    items(groups) { group ->
+                        ChatListRow(
+                            id = group.id.toString(), 
+                            name = group.groupName, 
+                            isGroup = true, 
+                            onClick = { navController.navigate("group_chat/$currentUserId/${group.id}") }
+                        )
+                    }
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Direct Messages", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+
+                // অ্যাডমিন কার্ড
                 if (currentUserId != "ADMIN") {
                     item {
-                        ChatListRow("ADMIN", "Admin (Sir)", onClick = {
+                        ChatListRow("ADMIN", "Admin (Sir)", isGroup = false, onClick = {
                             navController.navigate("chat_detail/$currentUserId/ADMIN")
                         })
                     }
                 }
 
+                // ওয়ার্কার লিস্ট
                 items(filteredWorkers) { worker ->
                     if (worker.workerId != currentUserId) {
-                        ChatListRow(worker.workerId, worker.fullName, onClick = {
+                        ChatListRow(worker.workerId, worker.fullName, isGroup = false, onClick = {
                             navController.navigate("chat_detail/$currentUserId/${worker.workerId}")
                         })
                     }
@@ -98,7 +130,7 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
 }
 
 @Composable
-fun ChatListRow(id: String, name: String, onClick: () -> Unit) {
+fun ChatListRow(id: String, name: String, isGroup: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
@@ -113,12 +145,15 @@ fun ChatListRow(id: String, name: String, onClick: () -> Unit) {
                 modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp))
+                Icon(
+                    imageVector = if (isGroup) Icons.Default.Group else Icons.Default.Person, 
+                    contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp)
+                )
             }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                Text(text = "ID: $id | Tap to chat", fontSize = 12.sp, color = TextSecondary)
+                Text(text = if (isGroup) "Group Chat" else "ID: $id | Tap to chat", fontSize = 12.sp, color = TextSecondary)
             }
         }
     }
