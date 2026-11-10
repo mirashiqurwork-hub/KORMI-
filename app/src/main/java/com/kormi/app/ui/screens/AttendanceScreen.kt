@@ -1,7 +1,9 @@
 package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -112,7 +115,6 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         IconButton(onClick = { navController.navigate("overtime_entry") }) {
                             Icon(Icons.Default.MoreTime, contentDescription = "Overtime", tint = Gold)
                         }
-                        // OCR স্ক্রিনে যাওয়ার বাটন
                         IconButton(onClick = { navController.navigate("ocr_attendance") }) {
                             Icon(Icons.Default.DocumentScanner, contentDescription = "OCR", tint = Color.White)
                         }
@@ -213,18 +215,35 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     }
 }
 
+// 🌟 নতুন গ্লাস-শ্যাডো অ্যাটেনডেন্স কার্ড
 @Composable
 fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.2f))
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color.White, Color.White.copy(alpha = 0.2f))
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Navy.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                     Text(worker.fullName.take(1), color = Navy, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(worker.fullName, fontWeight = FontWeight.Bold, color = Navy)
-                    Text("Card: ${worker.workerId} | Sec: ${worker.section ?: "N/A"}", fontSize = 11.sp, color = TextSecondary)
+                    Text("Card: ${worker.workerId} | Sec: ${worker.section ?: "N/A"}", fontSize = 11.sp, color = Navy.copy(alpha = 0.7f))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -241,7 +260,7 @@ fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Un
 fun RowScope.StatusButton(text: String, isSelected: Boolean, color: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick, modifier = Modifier.weight(1f).height(36.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) color else Color.LightGray.copy(alpha = 0.3f), contentColor = if (isSelected) Color.White else Color.DarkGray),
+        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) color else Color.White.copy(alpha = 0.4f), contentColor = if (isSelected) Color.White else Color.DarkGray),
         contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(8.dp)
     ) {
         Text(text, fontSize = 12.sp)
