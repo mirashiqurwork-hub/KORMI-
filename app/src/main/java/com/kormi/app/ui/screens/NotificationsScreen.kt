@@ -21,14 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Notification
-import com.kormi.app.data.NotificationHelper
-import com.kormi.app.data.Worker
+import com.kormi.app.data.*
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -328,7 +327,17 @@ fun NotificationsScreen(navController: NavController, loggedInWorker: Worker?, c
 
                                 db.notificationDao().insertNotification(notif)
                                 
-                                // 🌟 এখানে সিস্টেম নোটিফিকেশন কল করা হলো
+                                // 🌟 গুগল শিটে নোটিফিকেশন সিঙ্ক
+                                val syncArray = JSONArray()
+                                val jsonObj = JSONObject()
+                                jsonObj.put("timestamp", notif.timestamp)
+                                jsonObj.put("title", notif.title)
+                                jsonObj.put("message", notif.message)
+                                jsonObj.put("senderName", notif.senderName)
+                                jsonObj.put("targetUnit", notif.targetUnit)
+                                syncArray.put(jsonObj)
+                                SyncHelper.postData("syncNotification", syncArray)
+
                                 NotificationHelper.showNotification(context, notif.title, notif.message)
                                 
                                 Toast.makeText(context, "সফলভাবে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
