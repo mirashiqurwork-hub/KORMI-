@@ -34,8 +34,12 @@ fun WorkerAttendanceScreen(worker: Worker) {
     var attendanceMap by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     
     var totalOvertimeHours by remember { mutableStateOf(0.0) }
-    var nightBillAmount by remember { mutableStateOf(20.0) }
-    var overtimeRate by remember { mutableStateOf(50.0) }
+    var nightBillRate by remember { mutableStateOf(20.0) }
+    
+    var baseSalary by remember { mutableStateOf(0.0) }
+    var overtimeAmount by remember { mutableStateOf(0.0) }
+    var nightBillAmount by remember { mutableStateOf(0.0) }
+    var totalSalary by remember { mutableStateOf(0.0) }
 
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -58,7 +62,7 @@ fun WorkerAttendanceScreen(worker: Worker) {
 
         val company = db.companyDao().getCompanyById(worker.companyId)
         if (company != null) {
-            nightBillAmount = company.nightBillAmount
+            nightBillRate = company.nightBillAmount
         }
     }
 
@@ -71,62 +75,49 @@ fun WorkerAttendanceScreen(worker: Worker) {
         when(status) {
             "Present" -> {
                 presentCount++
-                if (worker.shift == "P/C") {
-                    nightShiftCount++
-                }
+                if (worker.shift.equals("P/C", ignoreCase = true)) nightShiftCount++
             }
             "Absent" -> absentCount++
             "Off Day" -> offDayCount++
         }
     }
 
-    // ⚙️ নতুন বেতন হিসাবের লজিক (মাসিক বেতন থেকে দৈনিক বের করা হচ্ছে)
-    val monthlySalary = if (worker.salary > 0) worker.salary else 0.0
-    val dailyWage = if (maxDays > 0) (monthlySalary / maxDays) else 0.0
-    
-    val baseSalary = presentCount * dailyWage
-    val overtimeAmount = totalOvertimeHours * overtimeRate
-    val totalNightBill = nightShiftCount * nightBillAmount
-    
-    val totalSalary = baseSalary + overtimeAmount + totalNightBill
+    val dailyWage = if (worker.salary > 0 && maxDays > 0) (worker.salary / maxDays) else 0.0
+    baseSalary = presentCount * dailyWage
+    overtimeAmount = totalOvertimeHours * 50.0
+    nightBillAmount = nightShiftCount * nightBillRate
+    totalSalary = baseSalary + overtimeAmount + nightBillAmount
 
     val totalWorkingDays = presentCount + absentCount
     val presentRatio = if (totalWorkingDays > 0) (presentCount.toFloat() / totalWorkingDays.toFloat() * 100).toInt() else 0
 
     Scaffold(
-        topBar = { 
-            TopAppBar(
-                title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, 
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
-            ) 
-        }
+        topBar = { TopAppBar(title = { Text("My Attendance", color = Color.White, fontWeight = FontWeight.Bold) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp)) {
             
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Estimated Salary (${SimpleDateFormat("MMMM", Locale.US).format(calendar.time)})", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Text("Total Estimated Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                     Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Base", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-                            Text("৳${String.format(Locale.US, "%.0f", baseSalary)}", color = Color.White, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Overtime", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-                            Text("৳${String.format(Locale.US, "%.0f", overtimeAmount)}", color = Color.White, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Night Bill", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-                            Text("৳${String.format(Locale.US, "%.0f", totalNightBill)}", color = Color.White, fontSize = 12.sp)
-                        }
+                    // 🌟 বিস্তারিত বেতন ব্রেকডাউন
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Base", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                        Text("৳ ${String.format(Locale.US, "%.0f", baseSalary)}", color = Color.White, fontSize = 12.sp)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Overtime ($totalOvertimeHours hrs)", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                        Text("৳ ${String.format(Locale.US, "%.0f", overtimeAmount)}", color = Color.White, fontSize = 12.sp)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Night Bill", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                        Text("৳ ${String.format(Locale.US, "%.0f", nightBillAmount)}", color = Color.White, fontSize = 12.sp)
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    
                     Text("Present Ratio: $presentRatio%", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     LinearProgressIndicator(
