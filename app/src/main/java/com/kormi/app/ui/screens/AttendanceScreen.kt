@@ -1,258 +1,279 @@
 package com.kormi.app.ui.screens
 
-import android.content.Context
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DocumentScanner
+import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Worker
+import com.kormi.app.data.*
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
-import java.util.Calendar
-import java.util.Locale
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, currentUserRole: String = "Worker") {
-    if (worker == null) return
-    
+fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
-    
-    var expanded by remember { mutableStateOf(false) }
-    var currentPhotoUri by remember { mutableStateOf(worker.photo) }
 
-    // স্যালারি ও এটেনডেন্স স্টেট
-    var presentCount by remember { mutableStateOf(0) }
-    var absentCount by remember { mutableStateOf(0) }
-    var offDayCount by remember { mutableStateOf(0) }
-    var totalOvertimeHours by remember { mutableStateOf(0.0) }
-    var nightBillRate by remember { mutableStateOf(20.0) }
+    val allWorkers by db.workerDao().getAllActiveWorkers().collectAsState(initial = emptyList())
     
-    var baseSalary by remember { mutableStateOf(0.0) }
-    var overtimeAmount by remember { mutableStateOf(0.0) }
-    var nightBillAmount by remember { mutableStateOf(0.0) }
-    var totalSalary by remember { mutableStateOf(0.0) }
+    var selectedSection by remember { mutableStateOf("ALL") }
+    val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
-    LaunchedEffect(worker.workerId) {
-        if (currentUserRole != "Worker") {
-            val attendanceList = db.attendanceDao().getWorkerAttendance(worker.workerId)
-            val currentMonthStr = android.text.format.DateFormat.format("yyyy-MM", System.currentTimeMillis()).toString()
+    val filteredWorkers = remember(allWorkers, loggedInWorker, selectedSection) {
+        var list = if (loggedInWorker == null || loggedInWorker.role == "Admin") {
+            allWorkers
+        } else if (loggedInWorker.role == "Management") {
+            allWorkers.filter { it.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT" }
+        } else {
+            allWorkers.filter { 
+                (it.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT") &&
+                (it.section.equals(loggedInWorker.section, ignoreCase = true) || loggedInWorker.section == "ALL SECTION") &&
+                (it.shift.equals(loggedInWorker.shift, ignoreCase = true) || loggedInWorker.shift == "ALL SHIFT")
+            }
+        }
+        if (selectedSection != "ALL") {
+            list = list.filter { it.section.equals(selectedSection, ignoreCase = true) }
+        }
+        list
+    }
+    
+    val calendar = Calendar.getInstance()
+    var selectedDateStr by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)) }
+    
+    var attendanceState by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var isSaved by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedDateStr, filteredWorkers) {
+        if (filteredWorkers.isNotEmpty()) {
+            val existingList = db.attendanceDao().getAttendanceByDate(selectedDateStr)
+            val existingMap = existingList.associate { it.workerId to it.status }
             
-            var present = 0
-            var absent = 0
-            var offDay = 0
-            var nightShift = 0
-
-            attendanceList.forEach { att ->
-                if (att.date.startsWith(currentMonthStr)) {
-                    when(att.status) {
-                        "Present" -> {
-                            present++
-                            if (worker.shift.equals("P/C", ignoreCase = true)) nightShift++
-                        }
-                        "Absent" -> absent++
-                        "Off Day" -> offDay++
-                    }
+            val newMap = mutableMapOf<String, String>()
+            val dayOfWeek = getDayOfWeek(selectedDateStr)
+            
+            filteredWorkers.forEach { worker ->
+                if (existingMap.containsKey(worker.workerId)) {
+                    newMap[worker.workerId] = existingMap[worker.workerId]!!
+                } else {
+                    newMap[worker.workerId] = if (worker.weeklyOffDay.equals(dayOfWeek, ignoreCase = true)) "Off Day" else "Present"
                 }
             }
-            presentCount = present
-            absentCount = absent
-            offDayCount = offDay
-
-            val otList = db.overtimeDao().getOvertimeByWorker(worker.workerId)
-            totalOvertimeHours = otList.sumOf { it.hours }
-
-            val company = db.companyDao().getCompanyById(worker.companyId)
-            if (company != null) {
-                nightBillRate = company.nightBillAmount
-            }
-
-            val maxDays = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
-            val dailyWage = if (worker.salary > 0 && maxDays > 0) (worker.salary / maxDays) else 0.0
-            
-            baseSalary = present * dailyWage
-            overtimeAmount = totalOvertimeHours * 50.0 // ডিফল্ট ওভারটাইম রেট ৫০ টাকা
-            nightBillAmount = nightShift * nightBillRate
-            totalSalary = baseSalary + overtimeAmount + nightBillAmount
+            attendanceState = newMap
+            isSaved = false
         }
     }
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            currentPhotoUri = uri.toString()
-            scope.launch { db.workerDao().updatePhoto(worker.workerId, uri.toString()) }
-        }
-    }
+    val datePickerDialog = DatePickerDialog(
+        context, { _, year, month, dayOfMonth ->
+            val cal = Calendar.getInstance()
+            cal.set(year, month, dayOfMonth)
+            selectedDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+        },
+        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+    )
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Profile", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    if (currentUserRole != "Worker") {
-                        IconButton(onClick = { mainNavController.popBackStack() }) {
+            Column {
+                TopAppBar(
+                    title = { Text("Attendance", color = Color.White, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
+                    },
+                    actions = {
+                        IconButton(onClick = { navController.navigate("overtime_entry") }) {
+                            Icon(Icons.Default.MoreTime, contentDescription = "Overtime", tint = Gold)
+                        }
+                        IconButton(onClick = { navController.navigate("ocr_attendance") }) {
+                            Icon(Icons.Default.DocumentScanner, contentDescription = "OCR", tint = Color.White)
+                        }
+                        IconButton(onClick = { datePickerDialog.show() }) {
+                            Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
+                )
+                ScrollableTabRow(
+                    selectedTabIndex = sections.indexOf(selectedSection),
+                    containerColor = Navy,
+                    contentColor = Color.White,
+                    edgePadding = 0.dp
+                ) {
+                    sections.forEach { section ->
+                        Tab(
+                            selected = selectedSection == section,
+                            onClick = { selectedSection = section },
+                            text = { Text(section, color = if(selectedSection==section) Gold else Color.White, fontSize = 12.sp) }
+                        )
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    scope.launch {
+                        var presentCount = 0
+                        var absentCount = 0
+                        var offDayCount = 0
+                        val syncArray = JSONArray()
+
+                        attendanceState.forEach { (workerId, status) ->
+                            db.attendanceDao().insertOrUpdate(Attendance(workerId, selectedDateStr, status))
+                            when(status) {
+                                "Present" -> presentCount++
+                                "Absent" -> absentCount++
+                                "Off Day" -> offDayCount++
+                            }
+                            val jsonObj = JSONObject()
+                            jsonObj.put("date", selectedDateStr)
+                            jsonObj.put("workerId", workerId)
+                            jsonObj.put("status", status)
+                            syncArray.put(jsonObj)
+                        }
+                        
+                        SyncHelper.postData("syncAttendance", syncArray)
+
+                        if (loggedInWorker != null) {
+                            val notifMessage = "ইউনিট: ${loggedInWorker.unit}, শিফট: ${loggedInWorker.shift}, সেকশন: ${loggedInWorker.section}\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
+                            db.notificationDao().insertNotification(
+                                Notification(
+                                    companyId = loggedInWorker.companyId,
+                                    targetUnit = loggedInWorker.unit ?: "ALL UNIT",
+                                    targetRole = "Management",
+                                    title = "Attendance Submitted by ${loggedInWorker.fullName}",
+                                    message = notifMessage,
+                                    senderName = loggedInWorker.fullName,
+                                    senderDesignation = loggedInWorker.designation,
+                                    isPinned = false
+                                )
+                            )
+                        }
+                        isSaved = true
+                        android.widget.Toast.makeText(context, "এটেনডেন্স সেভ হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
-                actions = {
-                    Box {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Default.Person, contentDescription = "Menu", tint = Color.White)
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            DropdownMenuItem(text = { Text("Profile Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { expanded = false })
-                            DropdownMenuItem(text = { Text("Logout") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { 
-                                expanded = false
-                                val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
-                                sharedPref.edit().clear().apply()
-                                mainNavController.navigate("login") { popUpTo(0) { inclusive = true } } 
-                            })
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
-            )
+                containerColor = Gold, contentColor = Navy
+            ) {
+                Text("Save", fontWeight = FontWeight.Bold)
+            }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF2F4F7))
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp), 
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
-                if (currentPhotoUri != null) {
-                    AsyncImage(model = currentPhotoUri, contentDescription = "Profile", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                } else {
-                    Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(60.dp))
-                }
-            }
-            Text("ছবি পরিবর্তন করতে ক্লিক করুন", fontSize = 11.sp, color = TextSecondary, modifier = Modifier.padding(top = 4.dp))
-
-            Spacer(Modifier.height(16.dp))
-            Text(text = worker.fullName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
-            Text(text = "Card: ${worker.workerId}", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
-            
-            if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || currentUserRole == "Management" || currentUserRole == "Officer") {
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = { mainNavController.navigate("edit_worker/${worker.workerId}") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Navy),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Edit Information")
-                }
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF2F4F7))) {
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Date: $selectedDateStr", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
+                if (isSaved) { Text(text = "Saved!", color = Color(0xFF388E3C), fontWeight = FontWeight.Bold) }
             }
 
-            Spacer(Modifier.height(24.dp))
-
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ProfileRow("Phone", worker.phone)
-                    ProfileRow("Role", worker.role)
-                    ProfileRow("Designation", worker.designation)
-                    ProfileRow("Unit", worker.unit ?: "N/A")
-                    ProfileRow("Section", worker.section ?: "N/A")
-                    ProfileRow("Shift", worker.shift ?: "N/A")
-                    ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
-                    ProfileRow("Status", worker.status)
-                    ProfileRow("Monthly Salary", "${worker.salary} Tk")
-                    ProfileRow("Address", worker.presentAddress ?: "N/A")
+            if (filteredWorkers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("আপনার সেকশনে কোনো কর্মী পাওয়া যায়নি।", color = TextSecondary)
                 }
-            }
-
-            if (currentUserRole != "Worker") {
-                Spacer(Modifier.height(16.dp))
-                Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
-                Spacer(Modifier.height(8.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(), 
-                    shape = RoundedCornerShape(16.dp), 
-                    colors = CardDefaults.cardColors(containerColor = Navy)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        }
-                        
-                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
-                        
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
-                            Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
-                            Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
-                        }
-
-                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
-                        }
+            } else {
+                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filteredWorkers) { worker ->
+                        val currentStatus = attendanceState[worker.workerId] ?: "Present"
+                        AttendanceRow(
+                            worker = worker, 
+                            status = currentStatus, 
+                            onStatusChange = { newStatus ->
+                                attendanceState = attendanceState.toMutableMap().apply { this[worker.workerId] = newStatus }
+                                isSaved = false
+                            },
+                            onClick = {
+                                navController.navigate("worker_details/${worker.workerId}")
+                            }
+                        )
                     }
                 }
             }
-            
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-fun ProfileRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, color = TextSecondary, fontSize = 14.sp)
-        Text(text = value, color = Navy, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+fun AttendanceRow(worker: Worker, status: String, onStatusChange: (String) -> Unit, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }, 
+        shape = RoundedCornerShape(12.dp), 
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                    Text(worker.fullName.take(1), color = Navy, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(worker.fullName, fontWeight = FontWeight.Bold, color = Navy)
+                    Text("Card: ${worker.workerId} | Sec: ${worker.section ?: "N/A"}", fontSize = 11.sp, color = TextSecondary)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusButton("Present", status == "Present", Color(0xFF4CAF50)) { onStatusChange("Present") }
+                StatusButton("Absent", status == "Absent", Color(0xFFF44336)) { onStatusChange("Absent") }
+                StatusButton("Off Day", status == "Off Day", Color(0xFFFFC107)) { onStatusChange("Off Day") }
+            }
+        }
     }
+}
+
+@Composable
+fun RowScope.StatusButton(text: String, isSelected: Boolean, color: Color, onClick: () -> Unit) {
+    Button(
+        onClick = onClick, modifier = Modifier.weight(1f).height(36.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) color else Color.LightGray.copy(alpha = 0.3f), contentColor = if (isSelected) Color.White else Color.DarkGray),
+        contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(text, fontSize = 12.sp)
+    }
+}
+
+fun getDayOfWeek(dateStr: String): String {
+    return try {
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = format.parse(dateStr)
+        val cal = Calendar.getInstance()
+        cal.time = date!!
+        when (cal.get(Calendar.DAY_OF_WEEK)) {
+            Calendar.SATURDAY -> "SATURDAY"
+            Calendar.SUNDAY -> "SUNDAY"
+            Calendar.MONDAY -> "MONDAY"
+            Calendar.TUESDAY -> "TUESDAY"
+            Calendar.WEDNESDAY -> "WEDNESDAY"
+            Calendar.THURSDAY -> "THURSDAY"
+            Calendar.FRIDAY -> "FRIDAY"
+            else -> ""
+        }
+    } catch (e: Exception) { "" }
 }
