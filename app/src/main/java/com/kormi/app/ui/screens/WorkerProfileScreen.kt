@@ -1,5 +1,6 @@
 package com.kormi.app.ui.screens
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
@@ -73,6 +73,10 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                             DropdownMenuItem(text = { Text("Profile Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { expanded = false })
                             DropdownMenuItem(text = { Text("Logout") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { 
                                 expanded = false
+                                // 🌟 লগআউট করলে SharedPreferences ক্লিয়ার করা
+                                val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                                sharedPref.edit().clear().apply()
+
                                 mainNavController.navigate("login") { popUpTo(0) { inclusive = true } } 
                             })
                         }
