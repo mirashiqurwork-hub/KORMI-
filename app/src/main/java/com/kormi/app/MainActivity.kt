@@ -48,8 +48,26 @@ class MainActivity : ComponentActivity() {
                     var currentUserRole by remember { mutableStateOf(savedRole) }
 
                     LaunchedEffect(Unit) {
+                        // 🌟 অ্যাডমিনের জন্য ডামি প্রোফাইল তৈরি করা (যদি না থাকে)
+                        val adminWorker = db.workerDao().getWorkerByCard("ADMIN")
+                        if (adminWorker == null) {
+                            db.workerDao().insertWorker(
+                                Worker(
+                                    workerId = "ADMIN",
+                                    fullName = "Admin",
+                                    role = "Admin",
+                                    designation = "Super Admin",
+                                    companyId = 1,
+                                    status = "Active",
+                                    salary = 0.0
+                                )
+                            )
+                        }
+
                         if (savedUserId.isNotEmpty() && savedRole != "ADMIN") {
                             loggedInWorker = db.workerDao().getWorkerByCard(savedUserId)
+                        } else if (savedUserId == "ADMIN") {
+                            loggedInWorker = db.workerDao().getWorkerByCard("ADMIN")
                         }
 
                         val companies = db.companyDao().getAllCompaniesSync()
@@ -74,7 +92,11 @@ class MainActivity : ComponentActivity() {
                         composable("login") { LoginScreen(navController) { userId, role ->
                             currentUserId = userId
                             currentUserRole = role
-                            if (role != "ADMIN") scope.launch { loggedInWorker = db.workerDao().getWorkerByCard(userId) }
+                            if (role != "ADMIN") {
+                                scope.launch { loggedInWorker = db.workerDao().getWorkerByCard(userId) }
+                            } else {
+                                scope.launch { loggedInWorker = db.workerDao().getWorkerByCard("ADMIN") }
+                            }
                         } }
                         composable("register") { RegisterScreen(navController) }
                         composable("dashboard") { DashboardScreen(navController, currentUserRole, if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), currentUserId) }
@@ -110,7 +132,7 @@ class MainActivity : ComponentActivity() {
                         composable("access_control") { AccessControlScreen(navController) }
                         composable("add_company") { AddCompanyScreen(navController) }
                         composable("manage_companies") { ManageCompaniesScreen(navController) }
-                        composable("audit_logs") { AuditLogScreen(navController) } // 🌟 নতুন রুট
+                        composable("audit_logs") { AuditLogScreen(navController) }
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             ChatDetailScreen(navController, backStackEntry.arguments?.getString("senderId") ?: "", backStackEntry.arguments?.getString("receiverId") ?: "")
