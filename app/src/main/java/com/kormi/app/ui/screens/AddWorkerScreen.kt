@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -52,6 +51,7 @@ fun AddWorkerScreen(navController: NavController) {
     var fullName by remember { mutableStateOf("") }
     var nid by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
+    var joiningDate by remember { mutableStateOf("") } // 🌟 Joining Date
     var salary by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -64,7 +64,7 @@ fun AddWorkerScreen(navController: NavController) {
     var selectedSection by remember { mutableStateOf("BACKSIDE") }
     var selectedUnit by remember { mutableStateOf("UNIT-01") }
     var selectedOffDay by remember { mutableStateOf("FRIDAY") }
-    var selectedStatus by remember { mutableStateOf("Active") }
+    var selectedStatus by remember { mutableStateOf("Pending") } // 🌟 ডিফল্ট Pending
 
     var companies by remember { mutableStateOf<List<Company>>(emptyList()) }
 
@@ -85,9 +85,15 @@ fun AddWorkerScreen(navController: NavController) {
         if (uri != null) photoUri = uri
     }
 
-    val datePickerDialog = DatePickerDialog(
+    val dobDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth -> dob = "$dayOfMonth/${month + 1}/$year" },
+        Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    )
+
+    val joiningDateDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth -> joiningDate = "$dayOfMonth/${month + 1}/$year" },
         Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
     )
 
@@ -120,14 +126,21 @@ fun AddWorkerScreen(navController: NavController) {
             }
             Text("Upload Photo", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
 
-            // RegTextField এখন RegisterScreen.kt থেকে আসছে, তাই এখানে নতুন করে লেখা হয়নি
             RegTextField("Card Number / Email *", cardNumber) { cardNumber = it }
             RegTextField("Full Name *", fullName) { fullName = it }
             RegTextField("NID / Birth Cert No", nid) { nid = it }
             
             OutlinedTextField(
                 value = dob, onValueChange = { }, label = { Text("Date of Birth") }, readOnly = true,
-                trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Default.DateRange, null) } },
+                trailingIcon = { IconButton(onClick = { dobDialog.show() }) { Icon(Icons.Default.DateRange, null) } },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+            )
+
+            // 🌟 Joining Date
+            OutlinedTextField(
+                value = joiningDate, onValueChange = { }, label = { Text("Joining Date") }, readOnly = true,
+                trailingIcon = { IconButton(onClick = { joiningDateDialog.show() }) { Icon(Icons.Default.DateRange, null) } },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
             )
@@ -153,7 +166,6 @@ fun AddWorkerScreen(navController: NavController) {
                 colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
             )
 
-            // DropdownField ও RegisterScreen.kt থেকে আসছে
             DropdownField("Company *", selectedCompany?.companyName ?: "Select Company", companies.map { it.companyName }) { index ->
                 selectedCompany = companies[index]
             }
@@ -226,6 +238,7 @@ fun AddWorkerScreen(navController: NavController) {
                                 photo = photoUri?.toString(),
                                 nidBirthCert = nid,
                                 dateOfBirth = dob,
+                                joiningDate = joiningDate,
                                 presentAddress = address,
                                 shift = selectedShift,
                                 section = selectedSection,
@@ -237,7 +250,6 @@ fun AddWorkerScreen(navController: NavController) {
                             )
                             db.workerDao().insertWorker(newWorker)
 
-                            // 🌟 অডিট লগ সেভ করা
                             val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                             val currentUserId = sharedPref.getString("userId", "ADMIN") ?: "ADMIN"
                             db.auditLogDao().insertLog(
