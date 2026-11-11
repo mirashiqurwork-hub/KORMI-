@@ -1,6 +1,6 @@
 package com.kormi.app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,9 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
@@ -46,44 +44,7 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7))) {
         
-        // 🌟 রিং ফ্রেমের শ্যাডো (ডান থেকে বামে বড় থেকে ছোট)
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            
-            val startX = w * 1.1f
-            val startY = h * 0.3f
-            val endX = -w * 0.2f
-            val endY = h * 0.8f
-            
-            val steps = 6
-            for (i in 0 until steps) {
-                val fraction = i.toFloat() / steps
-                val x = startX + (endX - startX) * fraction
-                val y = startY + (endY - startY) * fraction
-                val scale = 1f - (fraction * 0.6f)
-                
-                val frameWidth = 150f * scale
-                val frameHeight = 500f * scale
-                
-                drawRoundRect(
-                    color = Color(0xFFE5E9F0).copy(alpha = 0.8f),
-                    topLeft = Offset(x, y),
-                    size = Size(frameWidth, frameHeight),
-                    cornerRadius = CornerRadius(30f, 30f)
-                )
-                
-                for (j in 1..5) {
-                    drawCircle(
-                        color = Color(0xFFD0D7E5),
-                        radius = 12f * scale,
-                        center = Offset(x + (frameWidth * 0.2f), y + (frameHeight * (j / 6f)))
-                    )
-                }
-            }
-        }
-
-        // 🌟 কারখানার শ্যাডো ও ধোঁয়া (নিচে)
+        // কারখানার শ্যাডো ও ধোঁয়া
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -128,7 +89,6 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // 🌟 গ্লাসমরফিজম টেক্সট ফিল্ড
             OutlinedTextField(
                 value = userId,
                 onValueChange = { userId = it },
@@ -190,11 +150,19 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
                         errorMessage = ""
                         scope.launch {
                             if (inputId.equals("ADMIN", ignoreCase = true) && inputPass == "ADMIN123") {
+                                // SharedPreferences-এ অ্যাডমিন সেভ করা
+                                val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                                sharedPref.edit().putString("userId", "ADMIN").putString("role", "ADMIN").apply()
+
                                 onLoginSuccess("ADMIN", "ADMIN")
                                 navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
                             } else {
                                 val worker = db.workerDao().getWorkerForLogin(inputId)
                                 if (worker != null && worker.passwordHash == inputPass) {
+                                    // SharedPreferences-এ ওয়ার্কার সেভ করা
+                                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                                    sharedPref.edit().putString("userId", worker.workerId).putString("role", worker.role).apply()
+
                                     onLoginSuccess(worker.workerId, worker.role)
                                     if (worker.role == "Worker") {
                                         navController.navigate("worker_dashboard") { popUpTo("login") { inclusive = true } }
@@ -211,7 +179,7 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Navy.copy(alpha = 0.9f)),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isLoading
             ) {
