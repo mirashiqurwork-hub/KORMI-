@@ -39,7 +39,6 @@ fun AdminScreen(navController: NavController) {
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    // 🌟 ব্যাকআপ ফাইল পিকার (রিস্টোরের জন্য)
     val restoreLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -65,13 +64,15 @@ fun AdminScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 🌟 নতুন অ্যাপ্রুভাল বাটন
+            AdminMenuCard("Pending Approvals", "Approve new user accounts", Icons.Default.SupervisorAccount) { navController.navigate("pending_approvals") }
+            
             AdminMenuCard("Manage Companies", "View, edit or delete companies", Icons.Default.Business) { navController.navigate("manage_companies") }
             AdminMenuCard("Access Control", "Manage who sees which module", Icons.Default.Security) { navController.navigate("access_control") }
             AdminMenuCard("Add Company", "Register a new company", Icons.Default.AddBusiness) { navController.navigate("add_company") }
             AdminMenuCard("Manage Passwords", "Change worker login passwords", Icons.Default.Lock) { navController.navigate("admin_passwords") }
             AdminMenuCard("Audit Logs", "View all admin activities", Icons.Default.History) { navController.navigate("audit_logs") }
             
-            // 🌟 ব্যাকআপ এবং রিস্টোর
             AdminMenuCard("Backup Data", "Export all data to a file", Icons.Default.Backup) {
                 scope.launch {
                     val backupData = BackupHelper.generateBackup(db)
