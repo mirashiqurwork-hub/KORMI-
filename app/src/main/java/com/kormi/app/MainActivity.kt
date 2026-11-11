@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
             
-            // 🌟 ফন্ট সাইজ লোড করা (ডিফল্ট ১.০)
             var currentFontScale by remember { mutableStateOf(sharedPref.getFloat("fontScale", 1.0f)) }
 
             KormiTheme(fontScale = currentFontScale) {
