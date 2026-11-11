@@ -37,7 +37,6 @@ fun AccessControlScreen(navController: NavController) {
     var selectedWorker by remember { mutableStateOf<Worker?>(null) }
     var showDialog by remember { mutableStateOf(false) }
 
-    // সব মডিউলের লিস্ট
     val allModules = listOf("Workers", "Attendance", "Manpower", "Production", "Breakdown", "Messages", "Location", "Notifications")
 
     Scaffold(
@@ -77,9 +76,7 @@ fun AccessControlScreen(navController: NavController) {
             }
         }
 
-        // পারমিশন এডিট ডায়ালগ
         if (showDialog && selectedWorker != null) {
-            // বর্তমানে যে মডিউলগুলো পারমিশন আছে, সেগুলোর লিস্ট
             val currentAllowed = selectedWorker!!.allowedModules.split(",").map { it.trim() }.toMutableList()
             
             AlertDialog(
