@@ -1,6 +1,7 @@
 package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
+import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,9 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Company
-import com.kormi.app.data.Worker
+import com.kormi.app.data.*
 import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -235,6 +234,18 @@ fun AddWorkerScreen(navController: NavController) {
                                 passwordHash = password.trim()
                             )
                             db.workerDao().insertWorker(newWorker)
+                            
+                            // 🌟 অডিট লগ সেভ করা
+                            val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                            val currentUserId = sharedPref.getString("userId", "ADMIN") ?: "ADMIN"
+                            db.auditLogDao().insertLog(
+                                AuditLog(
+                                    action = "Worker Added",
+                                    details = "Added new ${selectedRole}: ${fullName} (${cardNumber})",
+                                    performedBy = currentUserId
+                                )
+                            )
+
                             Toast.makeText(context, "সফলভাবে একাউন্ট তৈরি হয়েছে!", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         }
@@ -247,6 +258,39 @@ fun AddWorkerScreen(navController: NavController) {
                 Text("Save Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun RegTextField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value, onValueChange = onValueChange, label = { Text(label) },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropdownField(label: String, selectedText: String, options: List<String>, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        OutlinedTextField(
+            value = selectedText, onValueChange = {}, label = { Text(label) }, readOnly = true,
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+        )
+        Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
+        
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEachIndexed { index, option ->
+                DropdownMenuItem(text = { Text(option) }, onClick = {
+                    onSelect(index)
+                    expanded = false
+                })
+            }
         }
     }
 }
