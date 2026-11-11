@@ -1,12 +1,14 @@
 package com.kormi.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,6 +55,17 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
     var role by remember { mutableStateOf(worker!!.role) }
     var designation by remember { mutableStateOf(worker!!.designation) }
 
+    var expandedRole by remember { mutableStateOf(false) }
+    var expandedDesig by remember { mutableStateOf(false) }
+
+    val roles = listOf("Worker", "Officer", "Management", "Admin")
+    val designations = when(role) {
+        "Worker" -> listOf("L/R", "HELPER", "SR.HELPER", "JR.A.OP", "SR.A.OP", "OP", "LINE-MAN")
+        "Officer" -> listOf("Supervisor", "APO", "SR APO", "PO", "SPO")
+        "Management" -> listOf("APM", "DPM", "PM", "AGM", "DGM", "GM")
+        else -> listOf("Admin", "Super Admin")
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -70,18 +83,41 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // এখানে WorkerTextField এর বদলে সরাসরি OutlinedTextField ব্যবহার করা হয়েছে
             OutlinedTextField(value = fullName, onValueChange = { fullName = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
+            
+            // Role Dropdown
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = role, onValueChange = {}, readOnly = true, label = { Text("Role") },
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                )
+                Box(modifier = Modifier.matchParentSize().clickable { expandedRole = true })
+                DropdownMenu(expanded = expandedRole, onDismissRequest = { expandedRole = false }) {
+                    roles.forEach { r -> DropdownMenuItem(text = { Text(r) }, onClick = { role = r; expandedRole = false }) }
+                }
+            }
+
+            // Designation Dropdown
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = designation, onValueChange = {}, readOnly = true, label = { Text("Designation") },
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }, modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                )
+                Box(modifier = Modifier.matchParentSize().clickable { expandedDesig = true })
+                DropdownMenu(expanded = expandedDesig, onDismissRequest = { expandedDesig = false }) {
+                    designations.forEach { d -> DropdownMenuItem(text = { Text(d) }, onClick = { designation = d; expandedDesig = false }) }
+                }
+            }
+
             OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unit") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = section, onValueChange = { section = it }, label = { Text("Section") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = shift, onValueChange = { shift = it }, label = { Text("Shift") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = offDay, onValueChange = { offDay = it }, label = { Text("Weekly Off Day") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = salary, onValueChange = { salary = it }, label = { Text("Salary") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
-            
-            OutlinedTextField(value = role, onValueChange = { }, label = { Text("Role (Read Only)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
-            OutlinedTextField(value = designation, onValueChange = { }, label = { Text("Designation (Read Only)") }, readOnly = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
 
             Spacer(Modifier.height(16.dp))
 
@@ -96,7 +132,9 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
                             shift = shift,
                             weeklyOffDay = offDay,
                             presentAddress = address,
-                            salary = salary.toDoubleOrNull() ?: 0.0
+                            salary = salary.toDoubleOrNull() ?: 0.0,
+                            role = role,
+                            designation = designation
                         )
                         db.workerDao().updateWorker(updatedWorker)
                         android.widget.Toast.makeText(context, "সফলভাবে আপডেট হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
