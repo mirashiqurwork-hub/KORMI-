@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
                     val db = AppDatabase.getDatabase(context)
                     val scope = rememberCoroutineScope()
                     
-                    // SharedPreferences থেকে সেভ করা লগইন চেক করা
                     val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                     val savedUserId = sharedPref.getString("userId", "") ?: ""
                     val savedRole = sharedPref.getString("role", "") ?: ""
@@ -48,7 +47,6 @@ class MainActivity : ComponentActivity() {
                     var currentUserId by remember { mutableStateOf(savedUserId) }
                     var currentUserRole by remember { mutableStateOf(savedRole) }
 
-                    // অ্যাপ ওপেন হওয়ার সাথে সাথে সেভ করা ইউজারের ডাটা লোড করা
                     LaunchedEffect(Unit) {
                         if (savedUserId.isNotEmpty() && savedRole != "ADMIN") {
                             loggedInWorker = db.workerDao().getWorkerByCard(savedUserId)
@@ -56,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                // নোটিফিকেশন পারমিশন (পরে রিকোয়েস্ট করা হবে)
+                                // নোটিফিকেশন পারমিশন
                             }
                         }
 
@@ -72,7 +70,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 🌟 লগইন করা থাকলে সরাসরি ড্যাশবোর্ডে পাঠাবে, নাহলে লগইনে
                     val startDestination = if (savedUserId.isNotEmpty()) {
                         if (savedRole == "Worker") "worker_dashboard" else "dashboard"
                     } else {
