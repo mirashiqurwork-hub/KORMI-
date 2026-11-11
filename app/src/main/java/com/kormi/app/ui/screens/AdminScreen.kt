@@ -40,45 +40,12 @@ fun AdminScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            AdminMenuCard(
-                title = "Manage Companies",
-                description = "View, edit or delete companies",
-                icon = Icons.Default.Business
-            ) {
-                navController.navigate("manage_companies")
-            }
-
-            AdminMenuCard(
-                title = "Access Control",
-                description = "Manage who sees which module",
-                icon = Icons.Default.Security
-            ) {
-                navController.navigate("access_control")
-            }
-
-            AdminMenuCard(
-                title = "Add Company",
-                description = "Register a new company",
-                icon = Icons.Default.AddBusiness
-            ) {
-                navController.navigate("add_company")
-            }
-
-            AdminMenuCard(
-                title = "Manage Passwords",
-                description = "Change worker login passwords",
-                icon = Icons.Default.Lock
-            ) {
-                navController.navigate("admin_passwords")
-            }
-
-            AdminMenuCard(
-                title = "System Settings",
-                description = "Configure app preferences",
-                icon = Icons.Default.Settings
-            ) {
-                // ভবিষ্যতে এখানে সেটিংস আসবে
-            }
+            AdminMenuCard("Manage Companies", "View, edit or delete companies", Icons.Default.Business) { navController.navigate("manage_companies") }
+            AdminMenuCard("Access Control", "Manage who sees which module", Icons.Default.Security) { navController.navigate("access_control") }
+            AdminMenuCard("Add Company", "Register a new company", Icons.Default.AddBusiness) { navController.navigate("add_company") }
+            AdminMenuCard("Manage Passwords", "Change worker login passwords", Icons.Default.Lock) { navController.navigate("admin_passwords") }
+            // 🌟 নতুন অডিট লগ বাটন
+            AdminMenuCard("Audit Logs", "View all admin activities", Icons.Default.History) { navController.navigate("audit_logs") }
         }
     }
 }
