@@ -7,10 +7,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // 🌟 এই ইমপোর্টটি ঠিক করা হলো
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
@@ -34,6 +36,8 @@ import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +50,61 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
     
     var expanded by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf(worker.photo) }
+
+    var presentCount by remember { mutableStateOf(0) }
+    var absentCount by remember { mutableStateOf(0) }
+    var offDayCount by remember { mutableStateOf(0) }
+    var totalOvertimeHours by remember { mutableStateOf(0.0) }
+    var nightBillRate by remember { mutableStateOf(20.0) }
+    
+    var baseSalary by remember { mutableStateOf(0.0) }
+    var overtimeAmount by remember { mutableStateOf(0.0) }
+    var nightBillAmount by remember { mutableStateOf(0.0) }
+    var totalSalary by remember { mutableStateOf(0.0) }
+
+    LaunchedEffect(worker.workerId) {
+        if (currentUserRole != "Worker") {
+            val attendanceList = db.attendanceDao().getWorkerAttendance(worker.workerId)
+            val currentMonthStr = android.text.format.DateFormat.format("yyyy-MM", System.currentTimeMillis()).toString()
+            
+            var present = 0
+            var absent = 0
+            var offDay = 0
+            var nightShift = 0
+
+            attendanceList.forEach { att ->
+                if (att.date.startsWith(currentMonthStr)) {
+                    when(att.status) {
+                        "Present" -> {
+                            present++
+                            if (worker.shift.equals("P/C", ignoreCase = true)) nightShift++
+                        }
+                        "Absent" -> absent++
+                        "Off Day" -> offDay++
+                    }
+                }
+            }
+            presentCount = present
+            absentCount = absent
+            offDayCount = offDay
+
+            val otList = db.overtimeDao().getOvertimeByWorker(worker.workerId)
+            totalOvertimeHours = otList.sumOf { it.hours }
+
+            val company = db.companyDao().getCompanyById(worker.companyId)
+            if (company != null) {
+                nightBillRate = company.nightBillAmount
+            }
+
+            val maxDays = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
+            val dailyWage = if (worker.salary > 0 && maxDays > 0) (worker.salary / maxDays) else 0.0
+            
+            baseSalary = present * dailyWage
+            overtimeAmount = totalOvertimeHours * 50.0
+            nightBillAmount = nightShift * nightBillRate
+            totalSalary = baseSalary + overtimeAmount + nightBillAmount
+        }
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
@@ -74,10 +133,8 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                             DropdownMenuItem(text = { Text("Profile Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { expanded = false })
                             DropdownMenuItem(text = { Text("Logout") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { 
                                 expanded = false
-                                // 🌟 লগআউট করলে SharedPreferences ক্লিয়ার করা
                                 val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                                 sharedPref.edit().clear().apply()
-
                                 mainNavController.navigate("login") { popUpTo(0) { inclusive = true } } 
                             })
                         }
@@ -87,7 +144,15 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF2F4F7))
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp), 
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
                 if (currentPhotoUri != null) {
                     AsyncImage(model = currentPhotoUri, contentDescription = "Profile", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -126,10 +191,59 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                     ProfileRow("Shift", worker.shift ?: "N/A")
                     ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
                     ProfileRow("Status", worker.status)
-                    ProfileRow("Salary", "${worker.salary} Tk")
+                    ProfileRow("Monthly Salary", "${worker.salary} Tk")
                     ProfileRow("Address", worker.presentAddress ?: "N/A")
                 }
             }
+
+            if (currentUserRole != "Worker") {
+                Spacer(Modifier.height(16.dp))
+                Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
+                Spacer(Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(), 
+                    shape = RoundedCornerShape(16.dp), 
+                    colors = CardDefaults.cardColors(containerColor = Navy)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
+                            Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
+                            Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
+                        }
+
+                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
