@@ -10,15 +10,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Message
-import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -44,9 +43,11 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
     val messages by db.messageDao().getChatMessages(currentUserId, otherUserId).collectAsState(initial = emptyList())
     val listState = rememberLazyListState()
     
-    // 🌟 চ্যাট সেটিংস (ওয়ালপেপার)
-    var isDarkWallpaper by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var isDarkWallpaper by remember { mutableStateOf(false) }
+
+    // 🌟 ইউনিক রুম নেম তৈরি (দুই ইউজারের আইডি মিলিয়ে, যাতে দুজনেই একই রুমে যুক্ত হয়)
+    val roomName = "kormi_call_${minOf(currentUserId, otherUserId)}_${maxOf(currentUserId, otherUserId)}"
 
     LaunchedEffect(Unit) {
         db.messageDao().markMessagesAsRead(otherUserId, currentUserId)
@@ -62,18 +63,10 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
         topBar = {
             TopAppBar(
                 title = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // 🌟 অনলাইন ডট
-                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color.Green))
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = if (otherUserId == "ADMIN") "Admin (Sir)" else "Worker: $otherUserId", 
-                                color = Color.White, fontWeight = FontWeight.Bold
-                            )
-                            Text("Online", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-                        }
-                    }
+                    Text(
+                        text = if (otherUserId == "ADMIN") "Admin (Sir)" else "Worker: $otherUserId", 
+                        color = Color.White, fontWeight = FontWeight.Bold
+                    ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -81,6 +74,13 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                     }
                 },
                 actions = {
+                    // 🌟 অডিও ও ভিডিও কল বাটন
+                    IconButton(onClick = { navController.navigate("call/$roomName/audio") }) {
+                        Icon(Icons.Default.Call, contentDescription = "Audio Call", tint = Color.White)
+                    }
+                    IconButton(onClick = { navController.navigate("call/$roomName/video") }) {
+                        Icon(Icons.Default.Videocam, contentDescription = "Video Call", tint = Color.White)
+                    }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
@@ -185,20 +185,6 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                                         )
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-                
-                // 🌟 টাইপিং ইন্ডিকেটর (ডেমো)
-                if (messages.isNotEmpty()) {
-                    item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                            Card(
-                                shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White)
-                            ) {
-                                Text("● ● ●", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color.Gray, fontSize = 10.sp)
                             }
                         }
                     }
