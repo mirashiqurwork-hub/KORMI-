@@ -52,12 +52,6 @@ class MainActivity : ComponentActivity() {
                             loggedInWorker = db.workerDao().getWorkerByCard(savedUserId)
                         }
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                // নোটিফিকেশন পারমিশন
-                            }
-                        }
-
                         val companies = db.companyDao().getAllCompaniesSync()
                         val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                         val todayDayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date()).uppercase()
@@ -77,94 +71,58 @@ class MainActivity : ComponentActivity() {
                     }
 
                     NavHost(navController = navController, startDestination = startDestination) {
-                        composable("login") { 
-                            LoginScreen(navController) { userId, role ->
-                                currentUserId = userId
-                                currentUserRole = role
-                                if (role != "ADMIN") {
-                                    scope.launch { loggedInWorker = db.workerDao().getWorkerByCard(userId) }
-                                }
-                            } 
-                        }
+                        composable("login") { LoginScreen(navController) { userId, role ->
+                            currentUserId = userId
+                            currentUserRole = role
+                            if (role != "ADMIN") scope.launch { loggedInWorker = db.workerDao().getWorkerByCard(userId) }
+                        } }
                         composable("register") { RegisterScreen(navController) }
-                        
-                        composable("dashboard") { 
-                            DashboardScreen(
-                                navController = navController, 
-                                role = currentUserRole, 
-                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
-                                userId = currentUserId
-                            ) 
-                        }
-                        
+                        composable("dashboard") { DashboardScreen(navController, currentUserRole, if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), currentUserId) }
                         composable("worker_hierarchy/{status}") { backStackEntry ->
                             val status = backStackEntry.arguments?.getString("status") ?: "Active"
                             WorkerHierarchyScreen(navController, status, loggedInWorker, currentUserRole)
                         }
-                        
                         composable("worker_dashboard") { WorkerDashboardScreen(navController, loggedInWorker) }
-                        
                         composable("worker_details/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             var selectedWorker by remember { mutableStateOf<Worker?>(null) }
                             LaunchedEffect(workerId) { selectedWorker = db.workerDao().getWorkerByCard(workerId) }
                             WorkerProfileScreen(navController, selectedWorker, currentUserRole)
                         }
-                        
                         composable("edit_worker/{workerId}") { backStackEntry ->
                             val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
                             EditWorkerScreen(navController, workerId)
                         }
-                        
                         composable("workers") { WorkersScreen(navController, loggedInWorker, currentUserRole) }
                         composable("add_worker") { AddWorkerScreen(navController) }
-                        
                         composable("ocr_worker") { OcrScreen(navController, "Worker List", loggedInWorker, currentUserRole) }
                         composable("ocr_attendance") { OcrAttendanceScreen(navController, loggedInWorker) }
-                        
                         composable("attendance") { AttendanceScreen(navController, loggedInWorker) }
                         composable("overtime_entry") { OvertimeEntryScreen(navController) }
-                        
                         composable("manpower") { ManpowerScreen(navController) }
-                        
                         composable("production") { ProductionScreen(navController) }
                         composable("production_ocr") { ProductionOcrScreen(navController, loggedInWorker) }
                         composable("production_calculator") { ProductionCalculatorScreen(navController) }
                         composable("production_history") { ProductionHistoryScreen(navController) }
-                        
                         composable("breakdown") { BreakdownScreen(navController) }
                         composable("admin") { AdminScreen(navController) }
-                        
                         composable("admin_passwords") { ManagePasswordsScreen(navController, loggedInWorker) }
                         composable("access_control") { AccessControlScreen(navController) }
-                        
                         composable("add_company") { AddCompanyScreen(navController) }
                         composable("manage_companies") { ManageCompaniesScreen(navController) }
-                        
+                        composable("audit_logs") { AuditLogScreen(navController) } // 🌟 নতুন রুট
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
-                            val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
-                            val receiverId = backStackEntry.arguments?.getString("receiverId") ?: ""
-                            ChatDetailScreen(navController, senderId, receiverId)
+                            ChatDetailScreen(navController, backStackEntry.arguments?.getString("senderId") ?: "", backStackEntry.arguments?.getString("receiverId") ?: "")
                         }
-                        
                         composable("create_group/{currentUserId}") { backStackEntry ->
-                            val currentUserIdArg = backStackEntry.arguments?.getString("currentUserId") ?: ""
-                            CreateGroupScreen(navController, currentUserIdArg)
+                            CreateGroupScreen(navController, backStackEntry.arguments?.getString("currentUserId") ?: "")
                         }
                         composable("group_chat/{currentUserId}/{groupId}") { backStackEntry ->
-                            val currentUserIdArg = backStackEntry.arguments?.getString("currentUserId") ?: ""
-                            val groupId = backStackEntry.arguments?.getString("groupId")?.toIntOrNull() ?: 0
-                            GroupChatDetailScreen(navController, currentUserIdArg, groupId)
+                            GroupChatDetailScreen(navController, backStackEntry.arguments?.getString("currentUserId") ?: "", backStackEntry.arguments?.getString("groupId")?.toIntOrNull() ?: 0)
                         }
-                        
-                        composable("notifications") { 
-                            NotificationsScreen(navController, loggedInWorker, currentUserRole) 
-                        }
-                        
-                        composable("location") { 
-                            LocationScreen(navController, loggedInWorker, currentUserRole) 
-                        }
+                        composable("notifications") { NotificationsScreen(navController, loggedInWorker, currentUserRole) }
+                        composable("location") { LocationScreen(navController, loggedInWorker, currentUserRole) }
                     }
                 }
             }
