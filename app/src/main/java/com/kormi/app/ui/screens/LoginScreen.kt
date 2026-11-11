@@ -44,7 +44,6 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7))) {
         
-        // কারখানার শ্যাডো ও ধোঁয়া
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -150,7 +149,6 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
                         errorMessage = ""
                         scope.launch {
                             if (inputId.equals("ADMIN", ignoreCase = true) && inputPass == "ADMIN123") {
-                                // SharedPreferences-এ অ্যাডমিন সেভ করা
                                 val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                                 sharedPref.edit().putString("userId", "ADMIN").putString("role", "ADMIN").apply()
 
@@ -159,7 +157,6 @@ fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -
                             } else {
                                 val worker = db.workerDao().getWorkerForLogin(inputId)
                                 if (worker != null && worker.passwordHash == inputPass) {
-                                    // SharedPreferences-এ ওয়ার্কার সেভ করা
                                     val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                                     sharedPref.edit().putString("userId", worker.workerId).putString("role", worker.role).apply()
 
