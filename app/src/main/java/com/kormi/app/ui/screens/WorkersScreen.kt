@@ -39,6 +39,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +58,6 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     
     val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
-    // 🌟 এখানে আপনার আসল URL টি বসানো হয়েছে
     val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
     val filteredWorkers = allWorkers.filter { worker ->
@@ -71,12 +71,12 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
         val userRole = if (currentUserRole == "ADMIN") "Admin" else currentUserRole
         val roleMatch = if (userRole == "Admin") true else {
             if (loggedInWorker?.role == "Officer") {
-                val unitMatch = worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
-                val secMatch = worker.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION"
-                val shiftMatch = worker.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT"
+                val unitMatch = worker.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT"
+                val secMatch = worker.section.equals(loggedInWorker.section, ignoreCase = true) || loggedInWorker.section == "ALL SECTION"
+                val shiftMatch = worker.shift.equals(loggedInWorker.shift, ignoreCase = true) || loggedInWorker.shift == "ALL SHIFT"
                 unitMatch && secMatch && shiftMatch
             } else if (loggedInWorker?.role == "Management") {
-                worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
+                worker.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT"
             } else true
         }
 
@@ -222,6 +222,16 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                     val obj = jsonArray.getJSONObject(i)
                     val existing = db.workerDao().getWorkerByCard(obj.getString("workerId"))
                     
+                    // ডাটা নরমালাইজ করা হচ্ছে
+                    var unitStr = obj.optString("unit", "").trim()
+                    if (unitStr == "01") unitStr = "UNIT-01"
+                    if (unitStr == "02") unitStr = "UNIT-02"
+                    
+                    val sectionStr = obj.optString("section", "").trim().uppercase(Locale.ROOT)
+                    val shiftStr = obj.optString("shift", "").trim().uppercase(Locale.ROOT)
+                    val offDayStr = obj.optString("offDay", "").trim().uppercase(Locale.ROOT)
+                    val statusStr = if (obj.optString("status").trim().equals("Active", ignoreCase = true)) "Active" else "Inactive"
+
                     val worker = Worker(
                         workerId = obj.getString("workerId"),
                         fullName = obj.getString("fullName"),
@@ -233,11 +243,11 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
                         nidBirthCert = obj.optString("nid", ""),
                         dateOfBirth = obj.optString("dob", ""),
                         presentAddress = obj.optString("address", ""),
-                        section = obj.optString("section", ""),
-                        shift = obj.optString("shift", ""),
-                        weeklyOffDay = obj.optString("offDay", ""),
-                        status = if (obj.optString("status") == "Active") "Active" else "Inactive",
-                        unit = obj.optString("unit", ""),
+                        section = sectionStr,
+                        shift = shiftStr,
+                        weeklyOffDay = offDayStr,
+                        status = statusStr,
+                        unit = unitStr,
                         passwordHash = existing?.passwordHash ?: "1234",
                         salary = existing?.salary ?: 500.0
                     )
