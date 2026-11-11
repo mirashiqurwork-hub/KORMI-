@@ -16,6 +16,7 @@ data class Worker(
     val phone: String = "",
     val nidBirthCert: String? = null,
     val dateOfBirth: String? = null,
+    val joiningDate: String? = null, // 🌟 নতুন ফিল্ড
     val presentAddress: String? = null,
     val latitude: Double? = null, 
     val longitude: Double? = null,
@@ -32,6 +33,5 @@ data class Worker(
     val accessUnits: String? = null, 
     val accessSections: String? = null,
     
-    // নতুন: কোন কোন মডিউল দেখতে পারবে (কমা দিয়ে আলাদা করা)
     val allowedModules: String = "Workers,Attendance,Manpower,Production,Breakdown,Messages,Location,Notifications"
 )
