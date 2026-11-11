@@ -163,6 +163,16 @@ fun AttendanceScreen(navController: NavController, loggedInWorker: Worker?) {
                         
                         SyncHelper.postData("syncAttendance", syncArray)
 
+                        // 🌟 অডিট লগ সেভ করা
+                        val actionBy = loggedInWorker?.fullName ?: "Admin"
+                        db.auditLogDao().insertLog(
+                            AuditLog(
+                                action = "Attendance Saved",
+                                details = "Date: $selectedDateStr, Section: $selectedSection (Present: $presentCount, Absent: $absentCount)",
+                                performedBy = actionBy
+                            )
+                        )
+
                         if (loggedInWorker != null) {
                             val notifMessage = "ইউনিট: ${loggedInWorker.unit}, শিফট: ${loggedInWorker.shift}, সেকশন: ${loggedInWorker.section}\nপ্রেজেন্ট: $presentCount জন, অ্যাবসেন্ট: $absentCount জন, অফ-ডে: $offDayCount জন।"
                             db.notificationDao().insertNotification(
