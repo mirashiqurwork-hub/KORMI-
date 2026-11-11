@@ -41,15 +41,16 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
     var selectedUnit by remember { mutableStateOf<String?>(null) }
     var selectedSection by remember { mutableStateOf<String?>(null) }
 
+    // কেস-ইনসেনসিটিভ ফিল্টার
     val baseWorkers = allWorkers.filter { worker ->
         val roleMatch = if (currentUserRole == "Admin" || currentUserRole == "ADMIN") true else {
             if (loggedInWorker?.role == "Officer") {
-                val unitMatch = worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
-                val secMatch = worker.section == loggedInWorker.section || loggedInWorker.section == "ALL SECTION"
-                val shiftMatch = worker.shift == loggedInWorker.shift || loggedInWorker.shift == "ALL SHIFT"
+                val unitMatch = worker.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT"
+                val secMatch = worker.section.equals(loggedInWorker.section, ignoreCase = true) || loggedInWorker.section == "ALL SECTION"
+                val shiftMatch = worker.shift.equals(loggedInWorker.shift, ignoreCase = true) || loggedInWorker.shift == "ALL SHIFT"
                 unitMatch && secMatch && shiftMatch
             } else if (loggedInWorker?.role == "Management") {
-                worker.unit == loggedInWorker.unit || loggedInWorker.unit == "ALL UNIT"
+                worker.unit.equals(loggedInWorker.unit, ignoreCase = true) || loggedInWorker.unit == "ALL UNIT"
             } else true
         }
         roleMatch && worker.status.equals(status, ignoreCase = true)
@@ -61,7 +62,10 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
     val currentList = when {
         selectedUnit == null -> units
         selectedSection == null -> sections
-        else -> baseWorkers.filter { it.unit == selectedUnit && it.section == selectedSection }.map { it.fullName }
+        else -> baseWorkers.filter { 
+            it.unit.equals(selectedUnit, ignoreCase = true) && 
+            it.section.equals(selectedSection, ignoreCase = true) 
+        }.map { it.fullName }
     }
 
     Scaffold(
@@ -104,16 +108,22 @@ fun WorkerHierarchyScreen(navController: NavController, status: String, loggedIn
             } else {
                 if (selectedUnit == null) {
                     items(units) { unit ->
-                        val count = baseWorkers.count { it.unit == unit }
+                        val count = baseWorkers.count { it.unit.equals(unit, ignoreCase = true) }
                         HierarchyCard(title = unit, subtitle = "$count Workers", onClick = { selectedUnit = unit })
                     }
                 } else if (selectedSection == null) {
                     items(sections) { section ->
-                        val count = baseWorkers.count { it.unit == selectedUnit && it.section == section }
+                        val count = baseWorkers.count { 
+                            it.unit.equals(selectedUnit, ignoreCase = true) && 
+                            it.section.equals(section, ignoreCase = true) 
+                        }
                         HierarchyCard(title = section, subtitle = "$count Workers", onClick = { selectedSection = section })
                     }
                 } else {
-                    val workersInSection = baseWorkers.filter { it.unit == selectedUnit && it.section == selectedSection }
+                    val workersInSection = baseWorkers.filter { 
+                        it.unit.equals(selectedUnit, ignoreCase = true) && 
+                        it.section.equals(selectedSection, ignoreCase = true) 
+                    }
                     items(workersInSection) { worker ->
                         HierarchyWorkerCard(worker, navController)
                     }
@@ -144,7 +154,6 @@ fun HierarchyCard(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
-// এখানে নাম পরিবর্তন করা হলো
 @Composable
 fun HierarchyWorkerCard(worker: Worker, navController: NavController) {
     val context = LocalContext.current
