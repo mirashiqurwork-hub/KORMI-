@@ -344,7 +344,6 @@ fun DashboardScreen(
         }
     }
 
-    // 🌟 ফন্ট সাইজ ডায়ালগ
     if (showFontDialog) {
         AlertDialog(
             onDismissRequest = { showFontDialog = false },
