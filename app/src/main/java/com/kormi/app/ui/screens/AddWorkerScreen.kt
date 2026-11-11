@@ -120,6 +120,7 @@ fun AddWorkerScreen(navController: NavController) {
             }
             Text("Upload Photo", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
 
+            // RegTextField এখন RegisterScreen.kt থেকে আসছে, তাই এখানে নতুন করে লেখা হয়নি
             RegTextField("Card Number / Email *", cardNumber) { cardNumber = it }
             RegTextField("Full Name *", fullName) { fullName = it }
             RegTextField("NID / Birth Cert No", nid) { nid = it }
@@ -152,6 +153,7 @@ fun AddWorkerScreen(navController: NavController) {
                 colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
             )
 
+            // DropdownField ও RegisterScreen.kt থেকে আসছে
             DropdownField("Company *", selectedCompany?.companyName ?: "Select Company", companies.map { it.companyName }) { index ->
                 selectedCompany = companies[index]
             }
@@ -234,7 +236,7 @@ fun AddWorkerScreen(navController: NavController) {
                                 passwordHash = password.trim()
                             )
                             db.workerDao().insertWorker(newWorker)
-                            
+
                             // 🌟 অডিট লগ সেভ করা
                             val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                             val currentUserId = sharedPref.getString("userId", "ADMIN") ?: "ADMIN"
@@ -258,39 +260,6 @@ fun AddWorkerScreen(navController: NavController) {
                 Text("Save Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun RegTextField(label: String, value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value, onValueChange = onValueChange, label = { Text(label) },
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DropdownField(label: String, selectedText: String, options: List<String>, onSelect: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-        OutlinedTextField(
-            value = selectedText, onValueChange = {}, label = { Text(label) }, readOnly = true,
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
-        )
-        Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
-        
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEachIndexed { index, option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = {
-                    onSelect(index)
-                    expanded = false
-                })
-            }
         }
     }
 }
