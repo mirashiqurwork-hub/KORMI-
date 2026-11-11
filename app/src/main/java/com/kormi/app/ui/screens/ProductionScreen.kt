@@ -1,6 +1,7 @@
 package com.kormi.app.ui.screens
 
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,11 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Production
-import com.kormi.app.data.SyncHelper
+import com.kormi.app.data.*
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
+import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -181,7 +181,6 @@ fun ProductionScreen(navController: NavController) {
 
                         val syncArray = JSONArray()
 
-                        // suspend function ঠিক করা হলো
                         suspend fun saveMachine(mName: String, kgStr: String) {
                             val kg = kgStr.toDoubleOrNull() ?: 0.0
                             if (kg > 0.0) {
@@ -223,6 +222,17 @@ fun ProductionScreen(navController: NavController) {
                             SyncHelper.postData("syncProduction", syncArray)
                         }
 
+                        // 🌟 অডিট লগ সেভ করা
+                        val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                        val currentUserId = sharedPref.getString("userId", "ADMIN") ?: "ADMIN"
+                        db.auditLogDao().insertLog(
+                            AuditLog(
+                                action = "Production Saved",
+                                details = "Date: $date, Unit: $u, Shift: $s",
+                                performedBy = currentUserId
+                            )
+                        )
+
                         summaryText = """
                             Unite :- $unit
                             Date:- $selectedDateDisplay
@@ -245,7 +255,7 @@ fun ProductionScreen(navController: NavController) {
             ) {
                 Text("Save & Generate Summary", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
