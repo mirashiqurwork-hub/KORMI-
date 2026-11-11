@@ -32,14 +32,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            KormiTheme {
+            val context = LocalContext.current
+            val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+            
+            // 🌟 ফন্ট সাইজ লোড করা (ডিফল্ট ১.০)
+            var currentFontScale by remember { mutableStateOf(sharedPref.getFloat("fontScale", 1.0f)) }
+
+            KormiTheme(fontScale = currentFontScale) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-                    val context = LocalContext.current
                     val db = AppDatabase.getDatabase(context)
                     val scope = rememberCoroutineScope()
                     
-                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                     val savedUserId = sharedPref.getString("userId", "") ?: ""
                     val savedRole = sharedPref.getString("role", "") ?: ""
 
@@ -98,7 +102,19 @@ class MainActivity : ComponentActivity() {
                             }
                         } }
                         composable("register") { RegisterScreen(navController) }
-                        composable("dashboard") { DashboardScreen(navController, currentUserRole, if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), currentUserId) }
+                        composable("dashboard") { 
+                            DashboardScreen(
+                                navController = navController, 
+                                role = currentUserRole, 
+                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
+                                userId = currentUserId,
+                                currentFontScale = currentFontScale,
+                                onFontScaleChange = { newScale ->
+                                    currentFontScale = newScale
+                                    sharedPref.edit().putFloat("fontScale", newScale).apply()
+                                }
+                            ) 
+                        }
                         composable("worker_hierarchy/{status}") { backStackEntry ->
                             val status = backStackEntry.arguments?.getString("status") ?: "Active"
                             WorkerHierarchyScreen(navController, status, loggedInWorker, currentUserRole)
@@ -136,7 +152,6 @@ class MainActivity : ComponentActivity() {
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             ChatDetailScreen(navController, backStackEntry.arguments?.getString("senderId") ?: "", backStackEntry.arguments?.getString("receiverId") ?: "")
                         }
-                        // 🌟 নতুন ভিডিও কলের রুট
                         composable("call/{roomName}/{callType}") { backStackEntry ->
                             val roomName = backStackEntry.arguments?.getString("roomName") ?: ""
                             val callType = backStackEntry.arguments?.getString("callType") ?: "audio"
