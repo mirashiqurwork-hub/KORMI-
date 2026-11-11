@@ -88,18 +88,12 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // গ্রুপ লিস্ট সেকশন
                 if (groups.isNotEmpty() && searchQuery.isEmpty()) {
                     item {
                         Text("Groups", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.padding(vertical = 4.dp))
                     }
                     items(groups) { group ->
-                        ChatListRow(
-                            id = group.id.toString(), 
-                            name = group.groupName, 
-                            isGroup = true, 
-                            onClick = { navController.navigate("group_chat/$currentUserId/${group.id}") }
-                        )
+                        ChatListRow(id = group.id.toString(), name = group.groupName, isGroup = true, isOnline = false, onClick = { navController.navigate("group_chat/$currentUserId/${group.id}") })
                     }
                     item {
                         Spacer(Modifier.height(8.dp))
@@ -107,21 +101,18 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
                     }
                 }
 
-                // অ্যাডমিন কার্ড
                 if (currentUserId != "ADMIN") {
                     item {
-                        ChatListRow("ADMIN", "Admin (Sir)", isGroup = false, onClick = {
-                            navController.navigate("chat_detail/$currentUserId/ADMIN")
-                        })
+                        // অ্যাডমিন সবসময় অনলাইন
+                        ChatListRow("ADMIN", "Admin (Sir)", isGroup = false, isOnline = true, onClick = { navController.navigate("chat_detail/$currentUserId/ADMIN") })
                     }
                 }
 
-                // ওয়ার্কার লিস্ট
                 items(filteredWorkers) { worker ->
                     if (worker.workerId != currentUserId) {
-                        ChatListRow(worker.workerId, worker.fullName, isGroup = false, onClick = {
-                            navController.navigate("chat_detail/$currentUserId/${worker.workerId}")
-                        })
+                        // ডেমো অনলাইন স্ট্যাটাস (যদি workerId-র শেষ ডিজিট জোড় হয় তবে অনলাইন)
+                        val isOnline = worker.workerId.lastOrNull()?.digitToIntOrNull()?.rem(2) == 0
+                        ChatListRow(worker.workerId, worker.fullName, isGroup = false, isOnline = isOnline, onClick = { navController.navigate("chat_detail/$currentUserId/${worker.workerId}") })
                     }
                 }
             }
@@ -130,7 +121,7 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
 }
 
 @Composable
-fun ChatListRow(id: String, name: String, isGroup: Boolean, onClick: () -> Unit) {
+fun ChatListRow(id: String, name: String, isGroup: Boolean, isOnline: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
@@ -141,19 +132,33 @@ fun ChatListRow(id: String, name: String, isGroup: Boolean, onClick: () -> Unit)
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isGroup) Icons.Default.Group else Icons.Default.Person, 
-                    contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp)
-                )
+            Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.BottomEnd) {
+                Box(
+                    modifier = Modifier.size(50.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isGroup) Icons.Default.Group else Icons.Default.Person, 
+                        contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp)
+                    )
+                }
+                // 🌟 অনলাইন স্ট্যাটাস ডট
+                if (isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .padding(2.dp)
+                            .clip(CircleShape)
+                            .background(Color.Green)
+                    )
+                }
             }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                Text(text = if (isGroup) "Group Chat" else "ID: $id | Tap to chat", fontSize = 12.sp, color = TextSecondary)
+                Text(text = if (isGroup) "Group Chat" else if (isOnline) "Online" else "Offline", fontSize = 12.sp, color = if(isOnline) Color.Green else TextSecondary)
             }
         }
     }
