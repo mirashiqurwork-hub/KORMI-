@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.AuditLog
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
@@ -114,6 +115,17 @@ fun ManagePasswordsScreen(navController: NavController, loggedInWorker: Worker?)
                             if (newPassword.isNotBlank()) {
                                 scope.launch {
                                     db.workerDao().updatePassword(selectedWorker!!.workerId, newPassword)
+
+                                    // 🌟 অডিট লগ সেভ করা
+                                    val actionBy = loggedInWorker?.fullName ?: "Admin"
+                                    db.auditLogDao().insertLog(
+                                        AuditLog(
+                                            action = "Password Changed",
+                                            details = "Changed password for ${selectedWorker!!.fullName} (${selectedWorker!!.workerId})",
+                                            performedBy = actionBy
+                                        )
+                                    )
+
                                     showDialog = false
                                 }
                             }
