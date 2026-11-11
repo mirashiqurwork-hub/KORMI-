@@ -59,6 +59,17 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     var absentCount by remember { mutableStateOf("0") }
     var offDayCount by remember { mutableStateOf("0") }
 
+    // 🌟 ইউজারের পারমিশন লোড করা
+    var userAllowedModules by remember { mutableStateOf("") }
+    LaunchedEffect(userId) {
+        if (userId != "ADMIN" && userId.isNotEmpty()) {
+            val worker = db.workerDao().getWorkerByCard(userId)
+            userAllowedModules = worker?.allowedModules ?: ""
+        } else {
+            userAllowedModules = "ALL"
+        }
+    }
+
     val allItems = listOf(
         DashboardItem("Active", Icons.Outlined.CheckCircle, "worker_hierarchy/Active", listOf("ADMIN", "Management", "Officer")),
         DashboardItem("Inactive", Icons.Outlined.Cancel, "worker_hierarchy/Inactive", listOf("ADMIN", "Management")),
@@ -72,7 +83,12 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
         DashboardItem("Admin", Icons.Outlined.AdminPanelSettings, "admin", listOf("ADMIN"))
     )
     
-    val dashboardItems = allItems.filter { it.allowedRoles.contains(role) }
+    // 🌟 রোল এবং পারমিশন—দুইটাই চেক করা হচ্ছে
+    val dashboardItems = allItems.filter { item ->
+        val roleMatch = item.allowedRoles.contains(role)
+        val permissionMatch = userAllowedModules == "ALL" || userAllowedModules.contains(item.titleEn)
+        roleMatch && permissionMatch
+    }
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -274,10 +290,8 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color.Red) }, 
                                 onClick = { 
                                     expandedMenu = false
-                                    // 🌟 লগআউট করলে SharedPreferences ক্লিয়ার করা
                                     val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
                                     sharedPref.edit().clear().apply()
-
                                     navController.navigate("login") { popUpTo(0) { inclusive = true } } 
                                 }
                             )
