@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -50,7 +52,10 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
     
     var expanded by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf(worker.photo) }
+    var showEditAdminDialog by remember { mutableStateOf(false) }
+    var adminName by remember { mutableStateOf(worker.fullName) }
 
+    // স্যালারি ও এটেনডেন্স স্টেট
     var presentCount by remember { mutableStateOf(0) }
     var absentCount by remember { mutableStateOf(0) }
     var offDayCount by remember { mutableStateOf(0) }
@@ -144,107 +149,168 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF2F4F7))
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp), 
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(modifier = Modifier.size(100.dp).clip(CircleShape).background(Navy.copy(alpha = 0.1f)).clickable { imagePickerLauncher.launch("image/*") }, contentAlignment = Alignment.Center) {
-                if (currentPhotoUri != null) {
-                    AsyncImage(model = currentPhotoUri, contentDescription = "Profile", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                } else {
-                    Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(60.dp))
-                }
-            }
-            Text("ছবি পরিবর্তন করতে ক্লিক করুন", fontSize = 11.sp, color = TextSecondary, modifier = Modifier.padding(top = 4.dp))
-
-            Spacer(Modifier.height(16.dp))
-            Text(text = worker.fullName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
-            Text(text = "Card: ${worker.workerId}", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
-            
-            if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || currentUserRole == "Management" || currentUserRole == "Officer") {
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = { mainNavController.navigate("edit_worker/${worker.workerId}") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Navy),
-                    shape = RoundedCornerShape(8.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp), 
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 🌟 গ্লাস কার্ড ডিজাইন
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(colors = listOf(Color.White.copy(alpha = 0.8f), Color.White.copy(alpha = 0.4f))))
+                        .border(2.dp, Color.White, CircleShape)
+                        .clickable { imagePickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Edit Information")
+                    if (currentPhotoUri != null) {
+                        AsyncImage(model = currentPhotoUri, contentDescription = "Profile", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    } else {
+                        Icon(Icons.Default.Person, contentDescription = "Photo", tint = Navy, modifier = Modifier.size(60.dp))
+                    }
                 }
-            }
+                Text("ছবি পরিবর্তন করতে ক্লিক করুন", fontSize = 11.sp, color = TextSecondary, modifier = Modifier.padding(top = 8.dp))
 
-            Spacer(Modifier.height(24.dp))
-
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ProfileRow("Phone", worker.phone)
-                    ProfileRow("Role", worker.role)
-                    ProfileRow("Designation", worker.designation)
-                    ProfileRow("Unit", worker.unit ?: "N/A")
-                    ProfileRow("Section", worker.section ?: "N/A")
-                    ProfileRow("Shift", worker.shift ?: "N/A")
-                    ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
-                    ProfileRow("Status", worker.status)
-                    ProfileRow("Monthly Salary", "${worker.salary} Tk")
-                    ProfileRow("Address", worker.presentAddress ?: "N/A")
-                }
-            }
-
-            if (currentUserRole != "Worker") {
                 Spacer(Modifier.height(16.dp))
-                Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
-                Spacer(Modifier.height(8.dp))
+                Text(text = worker.fullName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
+                Text(text = "Card: ${worker.workerId}", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
+                
+                if (currentUserRole == "Admin" || currentUserRole == "ADMIN" || currentUserRole == "Management" || currentUserRole == "Officer") {
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { 
+                            if (worker.workerId == "ADMIN") {
+                                showEditAdminDialog = true
+                            } else {
+                                mainNavController.navigate("edit_worker/${worker.workerId}") 
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Navy),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Edit Information")
+                    }
+                }
 
+                Spacer(Modifier.height(24.dp))
+
+                // 🌟 গ্লাস ইনফরমেশন কার্ড
                 Card(
-                    modifier = Modifier.fillMaxWidth(), 
-                    shape = RoundedCornerShape(16.dp), 
-                    colors = CardDefaults.cardColors(containerColor = Navy)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.6f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        }
-                        
-                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
-                        
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
-                            Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
-                            Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
-                        }
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ProfileRow("Phone", worker.phone)
+                        ProfileRow("Role", worker.role)
+                        ProfileRow("Designation", worker.designation)
+                        ProfileRow("Unit", worker.unit ?: "N/A")
+                        ProfileRow("Section", worker.section ?: "N/A")
+                        ProfileRow("Shift", worker.shift ?: "N/A")
+                        ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
+                        ProfileRow("Status", worker.status)
+                        ProfileRow("Monthly Salary", "${worker.salary} Tk")
+                        ProfileRow("Address", worker.presentAddress ?: "N/A")
+                    }
+                }
 
-                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+                if (currentUserRole != "Worker") {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
+                    Spacer(Modifier.height(8.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(), 
+                        shape = RoundedCornerShape(20.dp), 
+                        colors = CardDefaults.cardColors(containerColor = Navy.copy(alpha = 0.95f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
+                                Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+                            
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
+                                Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
+                                Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
+                            }
+
+                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                                Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                                Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                                Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(24.dp))
             }
-            
-            Spacer(Modifier.height(24.dp))
         }
+    }
+
+    // 🌟 এডমিনের নাম এডিট করার ডায়ালগ
+    if (showEditAdminDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditAdminDialog = false },
+            title = { Text("Edit Admin Name", fontWeight = FontWeight.Bold, color = Navy) },
+            text = {
+                OutlinedTextField(
+                    value = adminName, 
+                    onValueChange = { adminName = it }, 
+                    label = { Text("Name") }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val updatedAdmin = worker.copy(fullName = adminName)
+                            db.workerDao().updateWorker(updatedAdmin)
+                            showEditAdminDialog = false
+                            // রিফ্রেশ করার জন্য অ্যাক্টিভিটি রিক্রিয়েট বা ডাটা আপডেট নোটিফাই
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Navy)
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditAdminDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
