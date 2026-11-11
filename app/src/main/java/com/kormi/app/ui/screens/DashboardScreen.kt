@@ -1,5 +1,6 @@
 package com.kormi.app.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -129,7 +130,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7)).padding(padding)) {
             
-            // ১. রিং ফ্রেমের শ্যাডো
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -165,7 +165,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 }
             }
 
-            // ২. নীল হেডার
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val path = Path().apply {
                     moveTo(0f, 180f)
@@ -186,7 +185,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 drawPath(goldPath, Gold)
             }
 
-            // ৩. কারখানার শ্যাডো
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -276,6 +274,10 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color.Red) }, 
                                 onClick = { 
                                     expandedMenu = false
+                                    // 🌟 লগআউট করলে SharedPreferences ক্লিয়ার করা
+                                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                                    sharedPref.edit().clear().apply()
+
                                     navController.navigate("login") { popUpTo(0) { inclusive = true } } 
                                 }
                             )
@@ -283,7 +285,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                     }
                 }
 
-                // Hero Card
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -311,7 +312,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(text = "Main Modules", color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 12.dp))
 
-                // 🌟 ফ্রস্টেড গ্লাস মডিউল গ্রিড (সম্পূর্ণ বক্স-মুক্ত ও গোলাকার)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -360,15 +360,13 @@ private fun StatBox(label: String, value: String, color: Color, modifier: Modifi
     }
 }
 
-// 🌟 ১০০% ট্রান্সপারেন্ট, বক্স-মুক্ত এবং গোলাকার গ্লাস কার্ড
 @Composable
 private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
-    // Card-এর বদলে Box ব্যবহার করা হলো যাতে কোনো ডিফল্ট সাদা ব্যাকগ্রাউন্ড না আসে
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(28.dp)) // সম্পূর্ণ গোলাকার কোণা
+            .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.linearGradient(
                     colors = listOf(
@@ -391,7 +389,6 @@ private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // আইকনের পেছনে কোনো সাদা বক্স নেই
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.titleEn,
@@ -399,7 +396,6 @@ private fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // টেক্সটের পেছনে কোনো সাদা বক্স নেই
             Text(
                 text = item.titleEn,
                 fontSize = 12.sp,
