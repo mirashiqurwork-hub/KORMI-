@@ -17,13 +17,13 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,7 +47,6 @@ fun ManpowerScreen(navController: NavController) {
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    // 🌟 GraphicsLayer (স্ক্রিনশট নেওয়ার জন্য)
     val graphicsLayer = rememberGraphicsLayer()
 
     val calendar = Calendar.getInstance()
@@ -99,11 +98,11 @@ fun ManpowerScreen(navController: NavController) {
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // 🌟 ছবি সেভ ও শেয়ার করার ফাংশন
     fun shareImage() {
         scope.launch {
             try {
                 val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+                // 🌟 এখানে ProductionHistoryScreen-এর saveBitmapToCache ফাংশনটি কল হচ্ছে
                 val uri = saveBitmapToCache(context, bitmap)
                 
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -128,7 +127,6 @@ fun ManpowerScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // 🌟 শেয়ার বাটন
                     IconButton(onClick = { shareImage() }) {
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                     }
@@ -140,7 +138,6 @@ fun ManpowerScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        // 🌟 এই বক্সটির ভেতরের সবকিছু ছবি আকারে ক্যাপচার হবে
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -152,7 +149,6 @@ fun ManpowerScreen(navController: NavController) {
         ) {
             Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(16.dp)) {
                 
-                // রিপোর্টের হেডার (যাতে ছবিতে সুন্দর দেখায়)
                 Text(text = "Kormi", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
                 Text(text = "Manpower Report", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(8.dp))
@@ -162,7 +158,6 @@ fun ManpowerScreen(navController: NavController) {
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Navy) }
                 } else {
-                    // টোটাল সামারি কার্ড
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SummaryCard("Present", totalPresent.toString(), Color(0xFF4CAF50), Modifier.weight(1f))
                         SummaryCard("Absent", totalAbsent.toString(), Color(0xFFF44336), Modifier.weight(1f))
@@ -185,18 +180,6 @@ fun ManpowerScreen(navController: NavController) {
             }
         }
     }
-}
-
-// 🌟 বিটম্যাপ ফাইল সেভ করার হেল্পার ফাংশন
-fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri {
-    val imagesFolder = File(context.cacheDir, "images")
-    if (!imagesFolder.exists()) imagesFolder.mkdirs()
-    val file = File(imagesFolder, "manpower_${System.currentTimeMillis()}.png")
-    val stream = FileOutputStream(file)
-    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-    stream.flush()
-    stream.close()
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
 @Composable
