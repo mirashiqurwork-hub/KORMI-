@@ -1,5 +1,6 @@
 package com.kormi.app.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
+import com.kormi.app.data.AuditLog
 import com.kormi.app.data.Worker
 import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
@@ -86,7 +88,6 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
             OutlinedTextField(value = fullName, onValueChange = { fullName = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White))
             
-            // Role Dropdown
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = role, onValueChange = {}, readOnly = true, label = { Text("Role") },
@@ -99,7 +100,6 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
                 }
             }
 
-            // Designation Dropdown
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = designation, onValueChange = {}, readOnly = true, label = { Text("Designation") },
@@ -137,6 +137,18 @@ fun EditWorkerScreen(navController: NavController, workerId: String) {
                             designation = designation
                         )
                         db.workerDao().updateWorker(updatedWorker)
+
+                        // 🌟 অডিট লগ সেভ করা
+                        val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                        val currentUserId = sharedPref.getString("userId", "ADMIN") ?: "ADMIN"
+                        db.auditLogDao().insertLog(
+                            AuditLog(
+                                action = "Worker Edited",
+                                details = "Edited info of ${updatedWorker.fullName} (${updatedWorker.workerId})",
+                                performedBy = currentUserId
+                            )
+                        )
+
                         android.widget.Toast.makeText(context, "সফলভাবে আপডেট হয়েছে!", android.widget.Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     }
