@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
-import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 
@@ -93,7 +92,7 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
                         Text("Groups", fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.padding(vertical = 4.dp))
                     }
                     items(groups) { group ->
-                        ChatListRow(id = group.id.toString(), name = group.groupName, isGroup = true, isOnline = false, onClick = { navController.navigate("group_chat/$currentUserId/${group.id}") })
+                        ChatListRow(id = group.id.toString(), name = group.groupName, isGroup = true, onClick = { navController.navigate("group_chat/$currentUserId/${group.id}") })
                     }
                     item {
                         Spacer(Modifier.height(8.dp))
@@ -103,16 +102,13 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
 
                 if (currentUserId != "ADMIN") {
                     item {
-                        // অ্যাডমিন সবসময় অনলাইন
-                        ChatListRow("ADMIN", "Admin (Sir)", isGroup = false, isOnline = true, onClick = { navController.navigate("chat_detail/$currentUserId/ADMIN") })
+                        ChatListRow("ADMIN", "Admin (Sir)", isGroup = false, onClick = { navController.navigate("chat_detail/$currentUserId/ADMIN") })
                     }
                 }
 
                 items(filteredWorkers) { worker ->
-                    if (worker.workerId != currentUserId) {
-                        // ডেমো অনলাইন স্ট্যাটাস (যদি workerId-র শেষ ডিজিট জোড় হয় তবে অনলাইন)
-                        val isOnline = worker.workerId.lastOrNull()?.digitToIntOrNull()?.rem(2) == 0
-                        ChatListRow(worker.workerId, worker.fullName, isGroup = false, isOnline = isOnline, onClick = { navController.navigate("chat_detail/$currentUserId/${worker.workerId}") })
+                    if (worker.workerId != currentUserId && worker.workerId != "ADMIN") {
+                        ChatListRow(worker.workerId, worker.fullName, isGroup = false, onClick = { navController.navigate("chat_detail/$currentUserId/${worker.workerId}") })
                     }
                 }
             }
@@ -121,7 +117,7 @@ fun MessagesScreen(navController: NavController, currentUserId: String) {
 }
 
 @Composable
-fun ChatListRow(id: String, name: String, isGroup: Boolean, isOnline: Boolean, onClick: () -> Unit) {
+fun ChatListRow(id: String, name: String, isGroup: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
@@ -142,23 +138,11 @@ fun ChatListRow(id: String, name: String, isGroup: Boolean, isOnline: Boolean, o
                         contentDescription = null, tint = Navy, modifier = Modifier.size(30.dp)
                     )
                 }
-                // 🌟 অনলাইন স্ট্যাটাস ডট
-                if (isOnline) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .padding(2.dp)
-                            .clip(CircleShape)
-                            .background(Color.Green)
-                    )
-                }
             }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(text = name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Navy)
-                Text(text = if (isGroup) "Group Chat" else if (isOnline) "Online" else "Offline", fontSize = 12.sp, color = if(isOnline) Color.Green else TextSecondary)
+                Text(text = if (isGroup) "Group Chat" else "Tap to chat", fontSize = 12.sp, color = TextSecondary)
             }
         }
     }
