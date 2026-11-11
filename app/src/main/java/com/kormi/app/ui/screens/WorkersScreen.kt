@@ -57,7 +57,8 @@ fun WorkersScreen(navController: NavController, loggedInWorker: Worker?, current
     
     val sections = listOf("ALL", "BACKSIDE", "RING", "AUTOCONE", "PACKING")
 
-    val appsScriptUrl = "আপনার_স্ক্রিপ্ট_URL_এখানে_বসান"
+    // 🌟 এখানে আপনার আসল URL টি বসানো হয়েছে
+    val appsScriptUrl = "https://script.google.com/macros/s/AKfycbwlY0TWH1ogsZ43ieZIRGxl8a8Hf_dByxTQQ4JofSI9G8GnlASUDHmwwIlcUrjX9aVQjQ/exec"
 
     val filteredWorkers = allWorkers.filter { worker ->
         val matchesSearch = worker.fullName.contains(searchQuery, ignoreCase = true) ||
@@ -255,7 +256,6 @@ suspend fun fetchAndSaveWorkers(urlString: String, db: AppDatabase): String {
     }
 }
 
-// 🌟 নতুন গ্লাস-শ্যাডো ওয়ার্কার কার্ড
 @Composable
 fun WorkerCard(worker: Worker, navController: NavController) {
     val context = LocalContext.current
