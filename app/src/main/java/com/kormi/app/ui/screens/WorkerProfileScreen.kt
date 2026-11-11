@@ -55,7 +55,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
     var showEditAdminDialog by remember { mutableStateOf(false) }
     var adminName by remember { mutableStateOf(worker.fullName) }
 
-    // স্যালারি ও এটেনডেন্স স্টেট
     var presentCount by remember { mutableStateOf(0) }
     var absentCount by remember { mutableStateOf(0) }
     var offDayCount by remember { mutableStateOf(0) }
@@ -162,7 +161,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                     .padding(16.dp), 
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 🌟 গ্লাস কার্ড ডিজাইন
                 Box(
                     modifier = Modifier
                         .size(110.dp)
@@ -205,7 +203,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
 
                 Spacer(Modifier.height(24.dp))
 
-                // 🌟 গ্লাস ইনফরমেশন কার্ড
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -278,7 +275,6 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
         }
     }
 
-    // 🌟 এডমিনের নাম এডিট করার ডায়ালগ
     if (showEditAdminDialog) {
         AlertDialog(
             onDismissRequest = { showEditAdminDialog = false },
@@ -297,10 +293,9 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                             val updatedAdmin = worker.copy(fullName = adminName)
                             db.workerDao().updateWorker(updatedAdmin)
                             showEditAdminDialog = false
-                            // রিফ্রেশ করার জন্য অ্যাক্টিভিটি রিক্রিয়েট বা ডাটা আপডেট নোটিফাই
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Navy)
-                    }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Navy)
                 ) {
                     Text("Save")
                 }
