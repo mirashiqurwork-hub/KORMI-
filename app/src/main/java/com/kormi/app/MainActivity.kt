@@ -1,6 +1,7 @@
 package com.kormi.app
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -38,18 +39,24 @@ class MainActivity : ComponentActivity() {
                     val db = AppDatabase.getDatabase(context)
                     val scope = rememberCoroutineScope()
                     
+                    // SharedPreferences থেকে সেভ করা লগইন চেক করা
+                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
+                    val savedUserId = sharedPref.getString("userId", "") ?: ""
+                    val savedRole = sharedPref.getString("role", "") ?: ""
+
                     var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
-                    var currentUserId by remember { mutableStateOf("") }
-                    var currentUserRole by remember { mutableStateOf("") }
+                    var currentUserId by remember { mutableStateOf(savedUserId) }
+                    var currentUserRole by remember { mutableStateOf(savedRole) }
 
-                    val permissionLauncher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.RequestPermission()
-                    ) { isGranted -> }
-
+                    // অ্যাপ ওপেন হওয়ার সাথে সাথে সেভ করা ইউজারের ডাটা লোড করা
                     LaunchedEffect(Unit) {
+                        if (savedUserId.isNotEmpty() && savedRole != "ADMIN") {
+                            loggedInWorker = db.workerDao().getWorkerByCard(savedUserId)
+                        }
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                // নোটিফিকেশন পারমিশন (পরে রিকোয়েস্ট করা হবে)
                             }
                         }
 
@@ -65,7 +72,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    NavHost(navController = navController, startDestination = "login") {
+                    // 🌟 লগইন করা থাকলে সরাসরি ড্যাশবোর্ডে পাঠাবে, নাহলে লগইনে
+                    val startDestination = if (savedUserId.isNotEmpty()) {
+                        if (savedRole == "Worker") "worker_dashboard" else "dashboard"
+                    } else {
+                        "login"
+                    }
+
+                    NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") { 
                             LoginScreen(navController) { userId, role ->
                                 currentUserId = userId
@@ -130,7 +144,6 @@ class MainActivity : ComponentActivity() {
                         composable("add_company") { AddCompanyScreen(navController) }
                         composable("manage_companies") { ManageCompaniesScreen(navController) }
                         
-                        // 🌟 চ্যাট রুটগুলো
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             val senderId = backStackEntry.arguments?.getString("senderId") ?: ""
@@ -138,7 +151,6 @@ class MainActivity : ComponentActivity() {
                             ChatDetailScreen(navController, senderId, receiverId)
                         }
                         
-                        // নতুন গ্রুপ চ্যাট রুট
                         composable("create_group/{currentUserId}") { backStackEntry ->
                             val currentUserIdArg = backStackEntry.arguments?.getString("currentUserId") ?: ""
                             CreateGroupScreen(navController, currentUserIdArg)
