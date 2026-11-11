@@ -46,20 +46,26 @@ data class DashboardItem(val titleEn: String, val icon: ImageVector, val route: 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(navController: NavController, role: String, userName: String, userId: String) {
+fun DashboardScreen(
+    navController: NavController, 
+    role: String, 
+    userName: String, 
+    userId: String,
+    currentFontScale: Float,
+    onFontScaleChange: (Float) -> Unit
+) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
     var expandedMenu by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
-    var fontSizeLarge by remember { mutableStateOf(false) }
+    var showFontDialog by remember { mutableStateOf(false) }
 
     var presentCount by remember { mutableStateOf("0") }
     var absentCount by remember { mutableStateOf("0") }
     var offDayCount by remember { mutableStateOf("0") }
 
-    // 🌟 ইউজারের পারমিশন লোড করা
     var userAllowedModules by remember { mutableStateOf("") }
     LaunchedEffect(userId) {
         if (userId != "ADMIN" && userId.isNotEmpty()) {
@@ -83,7 +89,6 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
         DashboardItem("Admin", Icons.Outlined.AdminPanelSettings, "admin", listOf("ADMIN"))
     )
     
-    // 🌟 রোল এবং পারমিশন—দুইটাই চেক করা হচ্ছে
     val dashboardItems = allItems.filter { item ->
         val roleMatch = item.allowedRoles.contains(role)
         val permissionMatch = userAllowedModules == "ALL" || userAllowedModules.contains(item.titleEn)
@@ -271,11 +276,10 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                             }
 
                             DropdownMenuItem(
-                                text = { Text(if (fontSizeLarge) "Normal Font" else "Large Font") }, 
+                                text = { Text("Font Size") }, 
                                 leadingIcon = { Icon(Icons.Default.FormatSize, null) }, 
                                 onClick = { 
-                                    fontSizeLarge = !fontSizeLarge
-                                    android.widget.Toast.makeText(context, "ফন্ট সাইজ অপশনটি পরবর্তী ধাপে কার্যকর হবে", android.widget.Toast.LENGTH_SHORT).show()
+                                    showFontDialog = true
                                     expandedMenu = false 
                                 }
                             )
@@ -290,8 +294,7 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color.Red) }, 
                                 onClick = { 
                                     expandedMenu = false
-                                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
-                                    sharedPref.edit().clear().apply()
+                                    context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE).edit().clear().apply()
                                     navController.navigate("login") { popUpTo(0) { inclusive = true } } 
                                 }
                             )
@@ -341,6 +344,27 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
         }
     }
 
+    // 🌟 ফন্ট সাইজ ডায়ালগ
+    if (showFontDialog) {
+        AlertDialog(
+            onDismissRequest = { showFontDialog = false },
+            title = { Text("Select Font Size", fontWeight = FontWeight.Bold, color = Navy) },
+            text = {
+                Column {
+                    FontSizeOption("Small", 0.8f, currentFontScale, onFontScaleChange, context) { showFontDialog = false }
+                    FontSizeOption("Normal", 1.0f, currentFontScale, onFontScaleChange, context) { showFontDialog = false }
+                    FontSizeOption("Large", 1.2f, currentFontScale, onFontScaleChange, context) { showFontDialog = false }
+                    FontSizeOption("Extra Large", 1.4f, currentFontScale, onFontScaleChange, context) { showFontDialog = false }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFontDialog = false }) {
+                    Text("Close", color = Navy, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
@@ -363,6 +387,32 @@ fun DashboardScreen(navController: NavController, role: String, userName: String
                 }
             }
         )
+    }
+}
+
+@Composable
+fun FontSizeOption(
+    label: String, 
+    scale: Float, 
+    currentScale: Float, 
+    onScaleChange: (Float) -> Unit, 
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable { 
+            onScaleChange(scale)
+            android.widget.Toast.makeText(context, "ফন্ট সাইজ: $label", android.widget.Toast.LENGTH_SHORT).show()
+            onDismiss()
+        }.padding(vertical = 8.dp)
+    ) {
+        RadioButton(
+            selected = currentScale == scale,
+            onClick = null
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text = label, fontSize = (14 * scale).sp)
     }
 }
 
