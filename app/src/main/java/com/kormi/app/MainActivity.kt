@@ -48,7 +48,6 @@ class MainActivity : ComponentActivity() {
                     var currentUserRole by remember { mutableStateOf(savedRole) }
 
                     LaunchedEffect(Unit) {
-                        // 🌟 অ্যাডমিনের জন্য ডামি প্রোফাইল তৈরি করা (যদি না থাকে)
                         val adminWorker = db.workerDao().getWorkerByCard("ADMIN")
                         if (adminWorker == null) {
                             db.workerDao().insertWorker(
@@ -136,6 +135,12 @@ class MainActivity : ComponentActivity() {
                         composable("messages") { MessagesScreen(navController, currentUserId) }
                         composable("chat_detail/{senderId}/{receiverId}") { backStackEntry ->
                             ChatDetailScreen(navController, backStackEntry.arguments?.getString("senderId") ?: "", backStackEntry.arguments?.getString("receiverId") ?: "")
+                        }
+                        // 🌟 নতুন ভিডিও কলের রুট
+                        composable("call/{roomName}/{callType}") { backStackEntry ->
+                            val roomName = backStackEntry.arguments?.getString("roomName") ?: ""
+                            val callType = backStackEntry.arguments?.getString("callType") ?: "audio"
+                            VideoCallScreen(navController, roomName, isVideoCall = callType == "video")
                         }
                         composable("create_group/{currentUserId}") { backStackEntry ->
                             CreateGroupScreen(navController, backStackEntry.arguments?.getString("currentUserId") ?: "")
