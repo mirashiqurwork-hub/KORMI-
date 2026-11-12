@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -98,19 +100,19 @@ fun ManpowerScreen(navController: NavController) {
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    fun shareImage() {
+    // 🌟 PDF তৈরি ও শেয়ার করার ফাংশন
+    fun sharePdf() {
         scope.launch {
             try {
                 val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-                // 🌟 এখানে ProductionHistoryScreen-এর saveBitmapToCache ফাংশনটি কল হচ্ছে
-                val uri = saveBitmapToCache(context, bitmap)
+                val uri = saveBitmapToPdf(context, bitmap)
                 
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/png"
+                    type = "application/pdf"
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                context.startActivity(Intent.createChooser(shareIntent, "Share Manpower Summary"))
+                context.startActivity(Intent.createChooser(shareIntent, "Share Manpower Report"))
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -127,8 +129,8 @@ fun ManpowerScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { shareImage() }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                    IconButton(onClick = { sharePdf() }) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Share PDF", tint = Color.White)
                     }
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
@@ -200,4 +202,25 @@ fun SectionRow(section: String, count: Int) {
             Text(text = "$count", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Gold)
         }
     }
+}
+
+// 🌟 বিটম্যাপ থেকে PDF তৈরি করার হেল্পার ফাংশন
+fun saveBitmapToPdf(context: Context, bitmap: Bitmap): Uri {
+    val pdfDocument = PdfDocument()
+    val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+    val page = pdfDocument.startPage(pageInfo)
+    page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+    pdfDocument.finishPage(page)
+
+    val pdfFile = File(context.cacheDir, "manpower_${System.currentTimeMillis()}.pdf")
+    try {
+        FileOutputStream(pdfFile).use { out ->
+            pdfDocument.writeTo(out)
+        }
+    } catch (e: IOException) {
+        e.printStackTrace()
+    }
+    pdfDocument.close()
+
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
 }
