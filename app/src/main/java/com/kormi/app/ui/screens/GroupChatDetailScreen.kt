@@ -1,5 +1,8 @@
 package com.kormi.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,16 +15,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Message
 import com.kormi.app.ui.theme.Navy
@@ -41,6 +47,25 @@ fun GroupChatDetailScreen(navController: NavController, currentUserId: String, g
     
     val messages by db.messageDao().getGroupMessages(groupId).collectAsState(initial = emptyList())
     val listState = rememberLazyListState()
+
+    // 🌟 ছবি পাঠানোর লঞ্চার
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val msg = Message(
+                    senderId = currentUserId,
+                    receiverId = "GROUP",
+                    groupId = groupId,
+                    messageText = "",
+                    imageUri = uri.toString(),
+                    isRead = false
+                )
+                db.messageDao().insertMessage(msg)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         val group = db.chatGroupDao().getGroupById(groupId)
@@ -70,6 +95,10 @@ fun GroupChatDetailScreen(navController: NavController, currentUserId: String, g
                 modifier = Modifier.fillMaxWidth().background(Color.White).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
+                    Icon(Icons.Default.Image, contentDescription = "Attach Image", tint = Navy)
+                }
+                
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = { messageText = it },
@@ -90,7 +119,7 @@ fun GroupChatDetailScreen(navController: NavController, currentUserId: String, g
                             scope.launch {
                                 val msg = Message(
                                     senderId = currentUserId,
-                                    receiverId = "GROUP", // গ্রুপের জন্য ফিক্সড
+                                    receiverId = "GROUP",
                                     groupId = groupId,
                                     messageText = messageText,
                                     isRead = false
@@ -132,11 +161,27 @@ fun GroupChatDetailScreen(navController: NavController, currentUserId: String, g
                             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                // গ্রুপ চ্যাটে প্রেরকের নাম দেখা যাবে
                                 if (!isMe) {
                                     Text(text = msg.senderId, fontSize = 10.sp, color = Navy, fontWeight = FontWeight.Bold)
                                 }
-                                Text(text = msg.messageText, color = Color.Black, fontSize = 15.sp)
+                                
+                                // 🌟 ছবি থাকলে দেখাবে
+                                if (msg.imageUri != null) {
+                                    AsyncImage(
+                                        model = msg.imageUri,
+                                        contentDescription = "Sent Image",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(200.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                }
+
+                                if (msg.messageText.isNotEmpty()) {
+                                    Text(text = msg.messageText, color = Color.Black, fontSize = 15.sp)
+                                }
+                                
                                 Spacer(Modifier.height(4.dp))
                                 Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                                     val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(msg.timestamp))
