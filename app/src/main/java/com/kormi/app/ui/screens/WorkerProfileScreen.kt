@@ -55,6 +55,7 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
     var showEditAdminDialog by remember { mutableStateOf(false) }
     var adminName by remember { mutableStateOf(worker.fullName) }
 
+    // 🌟 বেতন ও অ্যাটেনডেন্স স্টেট
     var presentCount by remember { mutableStateOf(0) }
     var absentCount by remember { mutableStateOf(0) }
     var offDayCount by remember { mutableStateOf(0) }
@@ -66,48 +67,47 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
     var nightBillAmount by remember { mutableStateOf(0.0) }
     var totalSalary by remember { mutableStateOf(0.0) }
 
+    // 🌟 কারেন্ট ইউজার যেই হোক না কেন, বেতনের হিসাব লোড হবে
     LaunchedEffect(worker.workerId) {
-        if (currentUserRole != "Worker") {
-            val attendanceList = db.attendanceDao().getWorkerAttendance(worker.workerId)
-            val currentMonthStr = android.text.format.DateFormat.format("yyyy-MM", System.currentTimeMillis()).toString()
-            
-            var present = 0
-            var absent = 0
-            var offDay = 0
-            var nightShift = 0
+        val attendanceList = db.attendanceDao().getWorkerAttendance(worker.workerId)
+        val currentMonthStr = android.text.format.DateFormat.format("yyyy-MM", System.currentTimeMillis()).toString()
+        
+        var present = 0
+        var absent = 0
+        var offDay = 0
+        var nightShift = 0
 
-            attendanceList.forEach { att ->
-                if (att.date.startsWith(currentMonthStr)) {
-                    when(att.status) {
-                        "Present" -> {
-                            present++
-                            if (worker.shift.equals("P/C", ignoreCase = true)) nightShift++
-                        }
-                        "Absent" -> absent++
-                        "Off Day" -> offDay++
+        attendanceList.forEach { att ->
+            if (att.date.startsWith(currentMonthStr)) {
+                when(att.status) {
+                    "Present" -> {
+                        present++
+                        if (worker.shift.equals("P/C", ignoreCase = true)) nightShift++
                     }
+                    "Absent" -> absent++
+                    "Off Day" -> offDay++
                 }
             }
-            presentCount = present
-            absentCount = absent
-            offDayCount = offDay
-
-            val otList = db.overtimeDao().getOvertimeByWorker(worker.workerId)
-            totalOvertimeHours = otList.sumOf { it.hours }
-
-            val company = db.companyDao().getCompanyById(worker.companyId)
-            if (company != null) {
-                nightBillRate = company.nightBillAmount
-            }
-
-            val maxDays = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
-            val dailyWage = if (worker.salary > 0 && maxDays > 0) (worker.salary / maxDays) else 0.0
-            
-            baseSalary = present * dailyWage
-            overtimeAmount = totalOvertimeHours * 50.0
-            nightBillAmount = nightShift * nightBillRate
-            totalSalary = baseSalary + overtimeAmount + nightBillAmount
         }
+        presentCount = present
+        absentCount = absent
+        offDayCount = offDay
+
+        val otList = db.overtimeDao().getOvertimeByWorker(worker.workerId)
+        totalOvertimeHours = otList.sumOf { it.hours }
+
+        val company = db.companyDao().getCompanyById(worker.companyId)
+        if (company != null) {
+            nightBillRate = company.nightBillAmount
+        }
+
+        val maxDays = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
+        val dailyWage = if (worker.salary > 0 && maxDays > 0) (worker.salary / maxDays) else 0.0
+        
+        baseSalary = present * dailyWage
+        overtimeAmount = totalOvertimeHours * 50.0
+        nightBillAmount = nightShift * nightBillRate
+        totalSalary = baseSalary + overtimeAmount + nightBillAmount
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -161,6 +161,7 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                     .padding(16.dp), 
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // 🌟 গ্লাস প্রোফাইল ছবি
                 Box(
                     modifier = Modifier
                         .size(110.dp)
@@ -203,6 +204,7 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
 
                 Spacer(Modifier.height(24.dp))
 
+                // 🌟 গ্লাস ইনফরমেশন কার্ড
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -219,62 +221,64 @@ fun WorkerProfileScreen(mainNavController: NavController, worker: Worker?, curre
                         ProfileRow("Weekly Off Day", worker.weeklyOffDay ?: "N/A")
                         ProfileRow("Status", worker.status)
                         ProfileRow("Monthly Salary", "${worker.salary} Tk")
+                        ProfileRow("Joining Date", worker.joiningDate ?: "N/A")
                         ProfileRow("Address", worker.presentAddress ?: "N/A")
                     }
                 }
 
-                if (currentUserRole != "Worker") {
-                    Spacer(Modifier.height(16.dp))
-                    Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
-                    Spacer(Modifier.height(8.dp))
+                // 🌟 সবার জন্য বেতনের বিস্তারিত কার্ড (ওয়ার্কার, অফিসার, অ্যাডমিন)
+                Spacer(Modifier.height(16.dp))
+                Text("Current Month Salary & Attendance", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Navy, modifier = Modifier.align(Alignment.Start))
+                Spacer(Modifier.height(8.dp))
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(), 
-                        shape = RoundedCornerShape(20.dp), 
-                        colors = CardDefaults.cardColors(containerColor = Navy.copy(alpha = 0.95f)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.5f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
-                                Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                            }
-                            
-                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
-                            
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
-                                Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
-                                Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
-                            }
+                Card(
+                    modifier = Modifier.fillMaxWidth(), 
+                    shape = RoundedCornerShape(20.dp), 
+                    colors = CardDefaults.cardColors(containerColor = Navy.copy(alpha = 0.95f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total Estimated Salary", color = Color.White, fontSize = 16.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", totalSalary)}", color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Present", color = Color(0xFF4CAF50), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Absent", color = Color(0xFFF44336), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Off Day", color = Color(0xFFFFC107), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("$presentCount Days", color = Color.White, fontSize = 14.sp)
+                            Text("$absentCount Days", color = Color.White, fontSize = 14.sp)
+                            Text("$offDayCount Days", color = Color.White, fontSize = 14.sp)
+                        }
 
-                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
+                        Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = 0.2f))
 
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                                Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
-                            }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                                Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
-                            }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                                Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
-                            }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Base Salary", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", baseSalary)}", color = Color.White, fontSize = 14.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Overtime ($totalOvertimeHours Hours)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", overtimeAmount)}", color = Color.White, fontSize = 14.sp)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Night Bill", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                            Text("৳ ${String.format(Locale.US, "%.2f", nightBillAmount)}", color = Color.White, fontSize = 14.sp)
                         }
                     }
                 }
+                
                 Spacer(Modifier.height(24.dp))
             }
         }
     }
 
+    // অ্যাডমিনের নাম এডিট ডায়ালগ
     if (showEditAdminDialog) {
         AlertDialog(
             onDismissRequest = { showEditAdminDialog = false },
