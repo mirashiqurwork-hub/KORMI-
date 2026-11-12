@@ -1,5 +1,8 @@
 package com.kormi.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,21 +13,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Message
 import com.kormi.app.ui.theme.Navy
@@ -46,8 +47,25 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
     var showMenu by remember { mutableStateOf(false) }
     var isDarkWallpaper by remember { mutableStateOf(false) }
 
-    // 🌟 ইউনিক রুম নেম তৈরি (দুই ইউজারের আইডি মিলিয়ে, যাতে দুজনেই একই রুমে যুক্ত হয়)
     val roomName = "kormi_call_${minOf(currentUserId, otherUserId)}_${maxOf(currentUserId, otherUserId)}"
+
+    // 🌟 ছবি পাঠানোর লঞ্চার
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val msg = Message(
+                    senderId = currentUserId,
+                    receiverId = otherUserId,
+                    messageText = "",
+                    imageUri = uri.toString(),
+                    isRead = false
+                )
+                db.messageDao().insertMessage(msg)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         db.messageDao().markMessagesAsRead(otherUserId, currentUserId)
@@ -74,7 +92,6 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                     }
                 },
                 actions = {
-                    // 🌟 অডিও ও ভিডিও কল বাটন
                     IconButton(onClick = { navController.navigate("call/$roomName/audio") }) {
                         Icon(Icons.Default.Call, contentDescription = "Audio Call", tint = Color.White)
                     }
@@ -104,6 +121,11 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                 modifier = Modifier.fillMaxWidth().background(Color.White).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 🌟 গ্যালারি থেকে ছবি সিলেক্ট করার বাটন
+                IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
+                    Icon(Icons.Default.Image, contentDescription = "Attach Image", tint = Navy)
+                }
+                
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = { messageText = it },
@@ -170,7 +192,24 @@ fun ChatDetailScreen(navController: NavController, currentUserId: String, otherU
                             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Text(text = msg.messageText, color = Color.Black, fontSize = 15.sp)
+                                // 🌟 যদি মেসেজে ছবি থাকে, তবে ছবি দেখাবে
+                                if (msg.imageUri != null) {
+                                    AsyncImage(
+                                        model = msg.imageUri,
+                                        contentDescription = "Sent Image",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(200.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                }
+
+                                // টেক্সট মেসেজ থাকলে দেখাবে
+                                if (msg.messageText.isNotEmpty()) {
+                                    Text(text = msg.messageText, color = Color.Black, fontSize = 15.sp)
+                                }
+
                                 Spacer(Modifier.height(4.dp))
                                 Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                                     val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(msg.timestamp))
