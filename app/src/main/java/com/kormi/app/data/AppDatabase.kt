@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Worker::class, Company::class, Attendance::class, Message::class, Breakdown::class, Production::class, Notification::class, Overtime::class, ChatGroup::class, AuditLog::class], version = 18, exportSchema = false)
+@Database(entities = [Worker::class, Company::class, Attendance::class, Message::class, Breakdown::class, Production::class, Notification::class, Overtime::class, ChatGroup::class, AuditLog::class], version = 19, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun workerDao(): WorkerDao
     abstract fun companyDao(): CompanyDao
