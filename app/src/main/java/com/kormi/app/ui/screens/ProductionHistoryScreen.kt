@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,13 +33,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.kormi.app.data.AppDatabase
-import com.kormi.app.data.Production
 import com.kormi.app.ui.theme.Gold
 import com.kormi.app.ui.theme.Navy
 import com.kormi.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -53,14 +54,12 @@ fun ProductionHistoryScreen(navController: NavController) {
     val calendar = Calendar.getInstance()
     var selectedDate by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)) }
     
-    // ড্রিল-ডাউন স্টেট
     var selectedUnit by remember { mutableStateOf<String?>(null) }
     var selectedShift by remember { mutableStateOf<String?>(null) }
 
     val units = listOf("UNIT-01", "UNIT-02", "G/F", "F/F")
     val shifts = listOf("P/A", "P/B", "P/C")
 
-    // ডাটা লোড
     val allProduction by db.productionDao().getProductionByDate(selectedDate).collectAsState(initial = emptyList())
 
     val datePickerDialog = DatePickerDialog(
@@ -73,14 +72,13 @@ fun ProductionHistoryScreen(navController: NavController) {
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // 🌟 শেয়ার ফাংশন
-    fun shareImage() {
+    fun sharePdf() {
         scope.launch {
             try {
                 val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-                val uri = saveBitmapToCache(context, bitmap)
+                val uri = saveBitmapToPdf(context, bitmap)
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/png"
+                    type = "application/pdf"
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -114,8 +112,8 @@ fun ProductionHistoryScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { shareImage() }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                    IconButton(onClick = { sharePdf() }) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Share PDF", tint = Color.White)
                     }
                     IconButton(onClick = { datePickerDialog.show() }) {
                         Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color.White)
@@ -135,26 +133,26 @@ fun ProductionHistoryScreen(navController: NavController) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(16.dp)) {
+                Text("Kormi", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Navy)
+                Text("Production Report", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(8.dp))
                 Text("Date: $selectedDate", fontWeight = FontWeight.Bold, color = Navy, fontSize = 16.sp)
                 Spacer(Modifier.height(12.dp))
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (selectedUnit == null) {
-                        // 🌟 ১. ইউনিট লিস্ট
                         items(units) { unit ->
                             val unitData = allProduction.filter { it.unit == unit }
                             val totalKg = unitData.sumOf { it.weightKg }
                             MenuCard(title = unit, subtitle = "Total Production: $totalKg Kg", onClick = { selectedUnit = unit })
                         }
                     } else if (selectedShift == null) {
-                        // 🌟 ২. শিফট লিস্ট (ইউনিট সিলেক্ট করার পর)
                         items(shifts) { shift ->
                             val shiftData = allProduction.filter { it.unit == selectedUnit && it.shift == shift }
                             val shiftTotal = shiftData.sumOf { it.weightKg }
                             MenuCard(title = shift, subtitle = "Total: $shiftTotal Kg", onClick = { selectedShift = shift })
                         }
                         
-                        // 🌟 ৩. টোটাল সামারি (সব শিফটের মেশিনভিত্তিক যোগফল)
                         val unitTotalData = allProduction.filter { it.unit == selectedUnit }
                         if (unitTotalData.isNotEmpty()) {
                             item {
@@ -183,7 +181,6 @@ fun ProductionHistoryScreen(navController: NavController) {
                             }
                         }
                     } else {
-                        // 🌟 ৪. মেশিন লিস্ট (শিফট সিলেক্ট করার পর)
                         val finalData = allProduction.filter { it.unit == selectedUnit && it.shift == selectedShift }
                         if (finalData.isEmpty()) {
                             item {
@@ -230,13 +227,23 @@ fun MenuCard(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
-fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri {
-    val imagesFolder = File(context.cacheDir, "images")
-    if (!imagesFolder.exists()) imagesFolder.mkdirs()
-    val file = File(imagesFolder, "production_${System.currentTimeMillis()}.png")
-    val stream = FileOutputStream(file)
-    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-    stream.flush()
-    stream.close()
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+// 🌟 বিটম্যাপ থেকে PDF তৈরি করার হেল্পার ফাংশন
+fun saveBitmapToPdf(context: Context, bitmap: Bitmap): Uri {
+    val pdfDocument = PdfDocument()
+    val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+    val page = pdfDocument.startPage(pageInfo)
+    page.canvas.drawBitmap(bitmap, 0f, 0f, null)
+    pdfDocument.finishPage(page)
+
+    val pdfFile = File(context.cacheDir, "production_${System.currentTimeMillis()}.pdf")
+    try {
+        FileOutputStream(pdfFile).use { out ->
+            pdfDocument.writeTo(out)
+        }
+    } catch (e: IOException) {
+        e.printStackTrace()
+    }
+    pdfDocument.close()
+
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
 }
