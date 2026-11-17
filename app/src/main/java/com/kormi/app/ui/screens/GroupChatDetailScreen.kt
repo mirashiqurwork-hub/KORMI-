@@ -1,201 +1,146 @@
 package com.kormi.app.ui.screens
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.kormi.app.data.AppDatabase
 import com.kormi.app.data.Message
-import com.kormi.app.ui.theme.Navy
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupChatDetailScreen(navController: NavController, currentUserId: String, groupId: Int) {
-    val context = LocalContext.current
+fun GroupChatDetailScreen(navController: androidx.navigation.NavController, currentUserId: String, groupId: Int, groupName: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
-
-    var messageText by remember { mutableStateOf("") }
-    var groupName by remember { mutableStateOf("Group Chat") }
     
-    val messages by db.messageDao().getGroupMessages(groupId).collectAsState(initial = emptyList())
+    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    var textInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // 🌟 ছবি পাঠানোর লঞ্চার
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val msg = Message(
-                    senderId = currentUserId,
-                    receiverId = "GROUP",
-                    groupId = groupId,
-                    messageText = "",
-                    imageUri = uri.toString(),
-                    isRead = false
-                )
-                db.messageDao().insertMessage(msg)
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        val group = db.chatGroupDao().getGroupById(groupId)
-        if (group != null) groupName = group.groupName
-    }
-
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(groupId) {
+        db.messageDao().getMessagesForGroup(groupId).collect { list ->
+            messages = list
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(groupName, color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(groupName) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Navy)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             )
         },
         bottomBar = {
-            Row(
-                modifier = Modifier.fillMaxWidth().background(Color.White).padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                tonalElevation = 4.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
-                    Icon(Icons.Default.Image, contentDescription = "Attach Image", tint = Navy)
-                }
-                
-                OutlinedTextField(
-                    value = messageText,
-                    onValueChange = { messageText = it },
-                    placeholder = { Text("Type a message...") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF2F4F7),
-                        unfocusedContainerColor = Color(0xFFF2F4F7),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
-                    )
-                )
-                Spacer(Modifier.width(8.dp))
-                IconButton(
-                    onClick = {
-                        if (messageText.isNotBlank()) {
-                            scope.launch {
-                                val msg = Message(
-                                    senderId = currentUserId,
-                                    receiverId = "GROUP",
-                                    groupId = groupId,
-                                    messageText = messageText,
-                                    isRead = false
-                                )
-                                db.messageDao().insertMessage(msg)
-                                messageText = ""
-                            }
-                        }
-                    },
-                    modifier = Modifier.background(Navy, CircleShape).size(48.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White)
+                    OutlinedTextField(
+                        value = textInput,
+                        onValueChange = { textInput = it },
+                        placeholder = { Text("Type group message...") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            if (textInput.isNotBlank()) {
+                                val msgText = textInput
+                                textInput = ""
+                                scope.launch {
+                                    db.messageDao().insertMessage(
+                                        Message(
+                                            senderId = currentUserId,
+                                            receiverId = "group_$groupId",
+                                            text = msgText,
+                                            timestamp = System.currentTimeMillis()
+                                        )
+                                    )
+                                }
+                            }
+                        },
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                    }
                 }
             }
         }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE5DDD5)).padding(padding)) {
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(messages) { msg ->
                     val isMe = msg.senderId == currentUserId
-                    Row(
+                    Box(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+                        contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
-                        Card(
-                            shape = RoundedCornerShape(
-                                topStart = 16.dp, topEnd = 16.dp,
-                                bottomStart = if (isMe) 16.dp else 0.dp,
-                                bottomEnd = if (isMe) 0.dp else 16.dp
-                            ),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isMe) Color(0xFFDCF8C6) else Color.White
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        Surface(
+                            // Fixed unresolved reference clip issue
+                            modifier = Modifier
+                                .widthIn(max = 280.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            color = if (isMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
+                            Column(modifier = Modifier.padding(10.dp)) {
                                 if (!isMe) {
-                                    Text(text = msg.senderId, fontSize = 10.sp, color = Navy, fontWeight = FontWeight.Bold)
-                                }
-                                
-                                // 🌟 ছবি থাকলে দেখাবে
-                                if (msg.imageUri != null) {
-                                    AsyncImage(
-                                        model = msg.imageUri,
-                                        contentDescription = "Sent Image",
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(200.dp)
-                                            .clip(RoundedCornerShape(8.dp))
+                                    Text(
+                                        text = msg.senderId,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                     )
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                 }
-
-                                if (msg.messageText.isNotEmpty()) {
-                                    Text(text = msg.messageText, color = Color.Black, fontSize = 15.sp)
-                                }
-                                
-                                Spacer(Modifier.height(4.dp))
-                                Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                                    val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(msg.timestamp))
-                                    Text(text = time, fontSize = 10.sp, color = Color.Gray)
-                                    if (isMe) {
-                                        Spacer(Modifier.width(4.dp))
-                                        Icon(
-                                            imageVector = if (msg.isRead) Icons.Default.DoneAll else Icons.Default.Done,
-                                            contentDescription = "Status",
-                                            tint = if (msg.isRead) Color(0xFF34B7F1) else Color.Gray,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
+                                Text(text = msg.text, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(msg.timestamp)),
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.align(Alignment.End)
+                                )
                             }
                         }
                     }
