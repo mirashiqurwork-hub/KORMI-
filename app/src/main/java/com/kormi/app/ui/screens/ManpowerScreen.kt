@@ -1,10 +1,8 @@
 package com.kormi.app.ui.screens
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.pdf.PdfDocument
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,9 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +26,6 @@ import java.io.FileOutputStream
 fun ManpowerScreen(navController: androidx.navigation.NavController) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
-    val scope = rememberCoroutineScope()
     
     var workers by remember { mutableStateOf<List<Worker>>(emptyList()) }
 
@@ -51,7 +46,6 @@ fun ManpowerScreen(navController: androidx.navigation.NavController) {
                 },
                 actions = {
                     IconButton(onClick = {
-                        // Fixed ambiguous method resolution by using explicit context and clear naming
                         saveManpowerBitmapToPdf(context, workers)
                     }) {
                         Icon(Icons.Default.Share, contentDescription = "Export PDF")
@@ -82,7 +76,7 @@ fun ManpowerScreen(navController: androidx.navigation.NavController) {
                             Text(text = worker.fullName, style = MaterialTheme.typography.titleMedium)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = "ID: ${worker.workerId} | Designation: ${worker.designation}", fontSize = 13.sp)
-                            Text(text = "Shift: ${worker.shift ?: N/A} | Section: ${worker.section ?: N/A}", fontSize = 13.sp)
+                            Text(text = "Shift: ${worker.shift ?: "N/A"} | Section: ${worker.section ?: "N/A"}", fontSize = 13.sp)
                         }
                     }
                 }
@@ -91,7 +85,6 @@ fun ManpowerScreen(navController: androidx.navigation.NavController) {
     }
 }
 
-// Renamed and disambiguated PDF export helper to prevent duplicate/ambiguous collision across files
 private fun saveManpowerBitmapToPdf(context: Context, workers: List<Worker>) {
     try {
         val pdfDocument = PdfDocument()
@@ -125,4 +118,3 @@ private fun saveManpowerBitmapToPdf(context: Context, workers: List<Worker>) {
         Toast.makeText(context, "Error saving PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
     }
 }
-private val N/A = "N/A"
