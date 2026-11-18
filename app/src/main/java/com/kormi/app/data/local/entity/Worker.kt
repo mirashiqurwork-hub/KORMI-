@@ -3,25 +3,31 @@ package com.kormi.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-enum class UserRole {
-    ADMIN,
-    MANAGEMENT,
-    OFFICER,
-    WORKER,
-    PENDING
-}
-
 @Entity(tableName = "workers")
 data class Worker(
     @PrimaryKey val workerId: String,
     val fullName: String,
-    val password: String,
-    val role: UserRole,
+    val role: String,
+    val designation: String,
+    val companyId: Int,
+    val photo: String? = null,
     val phone: String = "",
-    val department: String = "",
-    val section: String = "",
-    val shift: String = "",
-    val cardNo: String = "",
+    val nidBirthCert: String? = null,
+    val dateOfBirth: String? = null,
+    val joiningDate: String? = null,
+    val presentAddress: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val shift: String? = null,
+    val section: String? = null,
+    val unit: String? = null,
+    val weeklyOffDay: String? = null,
+    val status: String = "Pending",
     val salary: Double = 0.0,
+    val passwordHash: String = "1234",
+    val password: String = "1234",
+    val accessUnits: String? = null,
+    val accessSections: String? = null,
+    val allowedModules: String = "Workers,Attendance,Manpower,Production,Breakdown,Messages,Location,Notifications",
     val isActive: Boolean = true
 )
