@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(navController) { userId, role ->
                                 currentUserId = userId
                                 currentUserRole = role
+                                sharedPref.edit().putString("userId", userId).putString("role", role).apply()
                                 scope.launch {
                                     loggedInWorker = if (role != "ADMIN") {
                                         db.workerDao().getWorkerByCard(userId)
@@ -63,18 +64,18 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("dashboard") { 
                             DashboardScreen(
-                                navController = navController, 
-                                userRole = currentUserRole, 
-                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), 
-                                currentUserId = currentUserId, 
-                                fontScale = currentFontScale
+                                navController, 
+                                currentUserRole, 
+                                if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), 
+                                currentUserId, 
+                                currentFontScale
                             ) { newScale ->
                                 currentFontScale = newScale
                                 sharedPref.edit().putFloat("fontScale", newScale).apply()
                             } 
                         }
                         composable("worker_dashboard") {
-                            WorkerDashboardScreen(navController = navController, workerId = currentUserId)
+                            WorkerDashboardScreen(navController, currentUserId)
                         }
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
@@ -87,7 +88,6 @@ class MainActivity : ComponentActivity() {
                         composable("notifications") { NotificationsScreen(navController) }
                         composable("admin") { AdminScreen(navController) }
 
-                        // Fixed Chat Detail Route with required parameters
                         composable(
                             route = "chat_detail/{recipientId}/{recipientName}",
                             arguments = listOf(
@@ -98,14 +98,13 @@ class MainActivity : ComponentActivity() {
                             val recipientId = backStackEntry.arguments?.getString("recipientId") ?: ""
                             val recipientName = backStackEntry.arguments?.getString("recipientName") ?: ""
                             ChatDetailScreen(
-                                navController = navController,
-                                currentUserId = currentUserId,
-                                recipientId = recipientId,
-                                recipientName = recipientName
+                                navController,
+                                currentUserId,
+                                recipientId,
+                                recipientName
                             )
                         }
 
-                        // Fixed Group Chat Detail Route with required parameters
                         composable(
                             route = "group_chat_detail/{groupId}/{groupName}",
                             arguments = listOf(
@@ -116,10 +115,10 @@ class MainActivity : ComponentActivity() {
                             val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
                             val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
                             GroupChatDetailScreen(
-                                navController = navController,
-                                currentUserId = currentUserId,
-                                groupId = groupId,
-                                groupName = groupName
+                                navController,
+                                currentUserId,
+                                groupId,
+                                groupName
                             )
                         }
                     }
