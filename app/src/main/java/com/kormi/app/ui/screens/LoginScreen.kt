@@ -1,11 +1,12 @@
 package com.kormi.app.ui.screens
 
-import android.content.Context
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Factory
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -14,183 +15,290 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.kormi.app.data.AppDatabase
-import com.kormi.app.ui.theme.Gold
-import com.kormi.app.ui.theme.Navy
+import com.kormi.app.data.local.KormiDatabase
+import com.kormi.app.data.prefs.SessionManager
+import com.kormi.app.ui.theme.KormiColors
+import com.kormi.app.ui.theme.KormiGlassCard
+import com.kormi.app.ui.theme.kormiYellowGradient
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(navController: NavController, onLoginSuccess: (String, String) -> Unit) {
+fun LoginScreen(
+    navController: NavController,
+    onLoginSuccess: (userId: String, role: String) -> Unit
+) {
     val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
     val scope = rememberCoroutineScope()
 
-    var userId by remember { mutableStateOf("") }
+    var workerId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF2F4F7))) {
-        
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val path = Path().apply {
-                moveTo(0f, h)
-                lineTo(0f, h - 100f)
-                lineTo(w * 0.1f, h - 150f)
-                lineTo(w * 0.2f, h - 150f)
-                lineTo(w * 0.2f, h - 250f)
-                lineTo(w * 0.25f, h - 250f)
-                lineTo(w * 0.25f, h - 180f)
-                lineTo(w * 0.4f, h - 180f)
-                lineTo(w * 0.45f, h - 220f)
-                lineTo(w * 0.5f, h - 180f)
-                lineTo(w * 0.6f, h - 180f)
-                lineTo(w * 0.6f, h - 300f)
-                lineTo(w * 0.65f, h - 300f)
-                lineTo(w * 0.65f, h - 160f)
-                lineTo(w * 0.8f, h - 160f)
-                lineTo(w * 0.85f, h - 200f)
-                lineTo(w * 1f, h - 120f)
-                lineTo(w * 1f, h)
-                close()
-            }
-            drawPath(path, Color(0xFFE8EDF2))
-
-            drawCircle(Color(0xFFEDF1F5), radius = 40f, center = Offset(w * 0.22f, h - 300f))
-            drawCircle(Color(0xFFEDF1F5), radius = 60f, center = Offset(w * 0.25f, h - 350f))
-            drawCircle(Color(0xFFEDF1F5), radius = 80f, center = Offset(w * 0.3f, h - 420f))
-            drawCircle(Color(0xFFEDF1F5), radius = 50f, center = Offset(w * 0.62f, h - 350f))
-            drawCircle(Color(0xFFEDF1F5), radius = 70f, center = Offset(w * 0.66f, h - 400f))
-            drawCircle(Color(0xFFEDF1F5), radius = 90f, center = Offset(w * 0.7f, h - 480f))
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(KormiColors.PureBlack)
+    ) {
+        // Top Yellow Glow
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFFD400).copy(alpha = 0.22f),
+                            Color(0xFF000000)
+                        )
+                    )
+                )
+        )
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Kormi", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Navy)
-            Text(text = "Workforce Companion", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(36.dp))
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            OutlinedTextField(
-                value = userId,
-                onValueChange = { userId = it },
-                label = { Text("Card Number / Mobile / Email") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Navy) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White.copy(alpha = 0.6f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.6f),
-                    focusedBorderColor = Navy,
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.8f)
+            // Logo / Factory Icon
+            Box(
+                modifier = Modifier
+                    .size(92.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(kormiYellowGradient()),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Factory,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(48.dp)
                 )
-            )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Navy) },
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Toggle Password Visibility",
-                            tint = Navy
-                        )
-                    }
-                },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White.copy(alpha = 0.6f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.6f),
-                    focusedBorderColor = Navy,
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.8f)
-                )
+            Text(
+                text = "KORMI",
+                color = KormiColors.MainYellow,
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 6.sp
             )
-
-            if (errorMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = errorMessage, color = Color.Red, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            }
+            Text(
+                text = "SPINNING MILLS LTD.",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 3.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Mill Management System",
+                color = KormiColors.MutedGrey,
+                fontSize = 13.sp
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = {
-                    val inputId = userId.trim()
-                    val inputPass = password.trim()
-                    
-                    if (inputId.isBlank() || inputPass.isBlank()) {
-                        errorMessage = "সব তথ্য পূরণ করুন"
-                    } else {
-                        isLoading = true
-                        errorMessage = ""
-                        scope.launch {
-                            if (inputId.equals("ADMIN", ignoreCase = true) && inputPass == "ADMIN123") {
-                                val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
-                                sharedPref.edit().putString("userId", "ADMIN").putString("role", "ADMIN").apply()
+            // Glass Card
+            KormiGlassCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        text = "Welcome Back",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Card No & Password দিয়ে Login করো",
+                        color = KormiColors.MutedGrey,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
 
-                                onLoginSuccess("ADMIN", "ADMIN")
-                                navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
-                            } else {
-                                val worker = db.workerDao().getWorkerForLogin(inputId)
-                                if (worker != null && worker.passwordHash == inputPass) {
-                                    val sharedPref = context.getSharedPreferences("KormiPrefs", Context.MODE_PRIVATE)
-                                    sharedPref.edit().putString("userId", worker.workerId).putString("role", worker.role).apply()
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                                    onLoginSuccess(worker.workerId, worker.role)
-                                    if (worker.role == "Worker") {
-                                        navController.navigate("worker_dashboard") { popUpTo("login") { inclusive = true } }
-                                    } else {
-                                        navController.navigate("dashboard") { popUpTo("login") { inclusive = true } }
-                                    }
-                                } else {
-                                    errorMessage = "ভুল তথ্য বা পাসওয়ার্ড!"
-                                    isLoading = false
-                                }
+                    // Worker ID Field
+                    Text(
+                        text = "CARD NO / WORKER ID",
+                        color = KormiColors.MainYellow,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = workerId,
+                        onValueChange = { workerId = it.uppercase() },
+                        placeholder = { Text("যেমন: ADMIN / 503056", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Filled.Person, null, tint = KormiColors.MainYellow) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = KormiColors.MainYellow,
+                            unfocusedBorderColor = Color(0xFF2A2A2A),
+                            focusedContainerColor = Color(0xFF141414),
+                            unfocusedContainerColor = Color(0xFF141414)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Password Field
+                    Text(
+                        text = "PASSWORD",
+                        color = KormiColors.MainYellow,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = { Text("Password", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Filled.Lock, null, tint = KormiColors.MainYellow) },
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    null,
+                                    tint = Color.Gray
+                                )
                             }
+                        },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = KormiColors.MainYellow,
+                            unfocusedBorderColor = Color(0xFF2A2A2A),
+                            focusedContainerColor = Color(0xFF141414),
+                            unfocusedContainerColor = Color(0xFF141414)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (errorMsg.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = errorMsg,
+                            color = KormiColors.AlertRed,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Login Button - Yellow
+                    Button(
+                        onClick = {
+                            if (workerId.isBlank() || password.isBlank()) {
+                                errorMsg = "Card No আর Password দুইটাই দাও"
+                                return@Button
+                            }
+                            isLoading = true
+                            errorMsg = ""
+                            scope.launch {
+                                try {
+                                    val db = KormiDatabase.getInstance(context)
+                                    val worker = db.workerDao().authenticate(
+                                        workerId.trim(),
+                                        password.trim()
+                                    )
+                                    if (worker != null) {
+                                        val session = SessionManager(context)
+                                        session.saveSession(
+                                            worker.workerId,
+                                            worker.fullName,
+                                            worker.role
+                                        )
+                                        onLoginSuccess(worker.workerId, worker.role.name)
+                                    } else {
+                                        errorMsg = "ভুল Card No বা Password!"
+                                    }
+                                } catch (e: Exception) {
+                                    errorMsg = "Login করতে সমস্যা হয়েছে"
+                                }
+                                isLoading = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent
+                        ),
+                        contentPadding = PaddingValues(0.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(kormiYellowGradient())
+                            .border(0.dp, Color.Transparent, RoundedCornerShape(14.dp))
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(
+                                text = "LOGIN →",
+                                color = Color.Black,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp
+                            )
                         }
                     }
-                },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Navy.copy(alpha = 0.9f)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Default Admin: ADMIN / ADMIN123",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             TextButton(onClick = { navController.navigate("register") }) {
-                Text("Create New Account", color = Navy, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = "নতুন Worker? Register করো",
+                    color = KormiColors.MainYellow,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
