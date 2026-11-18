@@ -43,6 +43,12 @@ class MainActivity : ComponentActivity() {
                     var currentUserId by remember { mutableStateOf(savedUserId) }
                     var currentUserRole by remember { mutableStateOf(savedRole) }
 
+                    LaunchedEffect(savedUserId) {
+                        if (savedUserId.isNotEmpty()) {
+                            loggedInWorker = db.workerDao().getWorkerByCard(savedUserId)
+                        }
+                    }
+
                     val startDestination = if (savedUserId.isNotEmpty()) {
                         if (savedRole == "Worker") "worker_dashboard" else "dashboard"
                     } else { "login" }
@@ -54,28 +60,27 @@ class MainActivity : ComponentActivity() {
                                 currentUserRole = role
                                 sharedPref.edit().putString("userId", userId).putString("role", role).apply()
                                 scope.launch {
-                                    loggedInWorker = if (role != "ADMIN") {
-                                        db.workerDao().getWorkerByCard(userId)
-                                    } else {
-                                        db.workerDao().getWorkerByCard("ADMIN")
-                                    }
+                                    loggedInWorker = db.workerDao().getWorkerByCard(userId)
                                 }
                             } 
                         }
                         composable("dashboard") { 
                             DashboardScreen(
-                                navController, 
-                                currentUserRole, 
-                                if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"), 
-                                currentUserId, 
-                                currentFontScale
+                                navController = navController,
+                                userRole = currentUserRole,
+                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
+                                currentUserId = currentUserId,
+                                fontScale = currentFontScale
                             ) { newScale ->
                                 currentFontScale = newScale
                                 sharedPref.edit().putFloat("fontScale", newScale).apply()
                             } 
                         }
                         composable("worker_dashboard") {
-                            WorkerDashboardScreen(navController, currentUserId)
+                            WorkerDashboardScreen(
+                                navController = navController,
+                                workerId = currentUserId
+                            )
                         }
                         composable("workers") { WorkersScreen(navController) }
                         composable("add_worker") { AddWorkerScreen(navController) }
@@ -98,10 +103,10 @@ class MainActivity : ComponentActivity() {
                             val recipientId = backStackEntry.arguments?.getString("recipientId") ?: ""
                             val recipientName = backStackEntry.arguments?.getString("recipientName") ?: ""
                             ChatDetailScreen(
-                                navController,
-                                currentUserId,
-                                recipientId,
-                                recipientName
+                                navController = navController,
+                                currentUserId = currentUserId,
+                                recipientId = recipientId,
+                                recipientName = recipientName
                             )
                         }
 
@@ -112,13 +117,14 @@ class MainActivity : ComponentActivity() {
                                 navArgument("groupName") { type = NavType.StringType }
                             )
                         ) { backStackEntry ->
-                            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
+                            val groupIdStr = backStackEntry.arguments?.getString("groupId") ?: "0"
+                            val groupId = groupIdStr.toIntOrNull() ?: 0
                             val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
                             GroupChatDetailScreen(
-                                navController,
-                                currentUserId,
-                                groupId,
-                                groupName
+                                navController = navController,
+                                currentUserId = currentUserId,
+                                groupId = groupId,
+                                groupName = groupName
                             )
                         }
                     }
