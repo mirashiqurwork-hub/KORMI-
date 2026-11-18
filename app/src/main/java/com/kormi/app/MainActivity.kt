@@ -4,17 +4,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.kormi.app.data.local.KormiDatabase
-import com.kormi.app.data.local.entity.Worker
-import com.kormi.app.data.prefs.SessionManager
 import com.kormi.app.ui.screens.DashboardScreen
 import com.kormi.app.ui.screens.LoginScreen
 import com.kormi.app.ui.theme.KormiTheme
-import kotlinx.coroutines.launch
+
+// নিচের ১টা লাইন তোমার DashboardScreen.kt থেকে কপি করে এখানে বসাও
+// DashboardScreen.kt খুললে উপরে লেখা থাকবে: import ... FontScaleOption
+// ওই লাইনটা এখানে বসাও। যেমন: import com.kormi.app.data.prefs.FontScaleOption
+import com.kormi.app.data.prefs.FontScaleOption
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,37 +29,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun KormiApp() {
-    val context = LocalContext.current
     val navController = rememberNavController()
-    val session = remember { SessionManager(context) }
-    val scope = rememberCoroutineScope()
 
-    var loggedInWorker by remember { mutableStateOf<Worker?>(null) }
-    var currentUserRole by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(true) }
+    var role by remember { mutableStateOf("") }
+    var userName by remember { mutableStateOf("") }
+    var userId by remember { mutableStateOf("") }
+    var currentFontScale by remember { mutableStateOf(FontScaleOption.NORMAL) }
 
-    // App চালু হলে Session থেকে Worker লোড করো
-    LaunchedEffect(Unit) {
-        val savedId = session.getWorkerId()
-        val savedRole = session.getRole()
-        if (!savedId.isNullOrBlank()) {
-            currentUserRole = savedRole ?: ""
-            try {
-                val db = KormiDatabase.getInstance(context)
-                loggedInWorker = db.workerDao().getWorkerById(savedId)
-            } catch (e: Exception) {
-                loggedInWorker = null
-            }
-        }
-        isLoading = false
-    }
-
-    if (isLoading) {
-        // Loading - কিছু দেখানোর দরকার নাই, KormiTheme এর ভিতরে থাকবে
-        return
-    }
-
-    val startDestination = if (session.isLoggedIn()) "dashboard" else "login"
+    // Login করা থাকলে dashboard, না থাকলে login
+    val startDestination = if (userId.isNotBlank()) "dashboard" else "login"
 
     NavHost(
         navController = navController,
@@ -68,14 +46,10 @@ fun KormiApp() {
         composable("login") {
             LoginScreen(
                 navController = navController,
-                onLoginSuccess = { userId, role ->
-                    currentUserRole = role
-                    scope.launch {
-                        try {
-                            val db = KormiDatabase.getInstance(context)
-                            loggedInWorker = db.workerDao().getWorkerById(userId)
-                        } catch (e: Exception) { }
-                    }
+                onLoginSuccess = { id, r ->
+                    userId = id
+                    role = r
+                    userName = id
                     navController.navigate("dashboard") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -86,25 +60,12 @@ fun KormiApp() {
         composable("dashboard") {
             DashboardScreen(
                 navController = navController,
-                loggedInWorker = loggedInWorker,
-                currentUserRole = currentUserRole,
-                onLogout = {
-                    session.clearSession()
-                    loggedInWorker = null
-                    currentUserRole = ""
-                    navController.navigate("login") {
-                        popUpTo("dashboard") { inclusive = true }
-                    }
-                }
+                role = role,
+                userName = userName,
+                userId = userId,
+                currentFontScale = currentFontScale,
+                onFontScaleChange = { currentFontScale = it }
             )
         }
-
-        // বাকি Screen গুলা এখানে একই ভাবে পাঠাইতে হবে:
-        // composable("access_control") {
-        //     AccessControlScreen(
-        //         loggedInWorker = loggedInWorker,
-        //         currentUserRole = currentUserRole
-        //     )
-        // }
     }
 }
