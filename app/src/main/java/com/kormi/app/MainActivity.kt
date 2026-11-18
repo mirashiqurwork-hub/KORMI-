@@ -66,11 +66,11 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("dashboard") { 
                             DashboardScreen(
-                                navController = navController,
-                                userRole = currentUserRole,
-                                userName = if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
-                                currentUserId = currentUserId,
-                                fontScale = currentFontScale
+                                navController,
+                                currentUserRole,
+                                if (currentUserRole == "ADMIN") "Admin" else (loggedInWorker?.fullName ?: "User"),
+                                currentUserId,
+                                currentFontScale
                             ) { newScale ->
                                 currentFontScale = newScale
                                 sharedPref.edit().putFloat("fontScale", newScale).apply()
@@ -78,8 +78,8 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("worker_dashboard") {
                             WorkerDashboardScreen(
-                                navController = navController,
-                                workerId = currentUserId
+                                navController,
+                                currentUserId
                             )
                         }
                         composable("workers") { WorkersScreen(navController) }
@@ -103,10 +103,10 @@ class MainActivity : ComponentActivity() {
                             val recipientId = backStackEntry.arguments?.getString("recipientId") ?: ""
                             val recipientName = backStackEntry.arguments?.getString("recipientName") ?: ""
                             ChatDetailScreen(
-                                navController = navController,
-                                currentUserId = currentUserId,
-                                recipientId = recipientId,
-                                recipientName = recipientName
+                                navController,
+                                currentUserId,
+                                recipientId,
+                                recipientName
                             )
                         }
 
@@ -121,10 +121,10 @@ class MainActivity : ComponentActivity() {
                             val groupId = groupIdStr.toIntOrNull() ?: 0
                             val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
                             GroupChatDetailScreen(
-                                navController = navController,
-                                currentUserId = currentUserId,
-                                groupId = groupId,
-                                groupName = groupName
+                                navController,
+                                currentUserId,
+                                groupId,
+                                groupName
                             )
                         }
                     }
